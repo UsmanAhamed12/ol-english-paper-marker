@@ -28,11 +28,12 @@ class ParsePdfInfoTests(unittest.TestCase):
 
 class ParsePdfImagesTests(unittest.TestCase):
     def test_skips_headers_and_parses_image_rows(self) -> None:
-        output = """\
-page   num  type   width height color comp bpc  enc interp object ID x-ppi y-ppi size ratio
--------------------------------------------------------------------------------------------
-   1     0 image    1636  2367  icc     3   8  jpeg yes       5  0    72    72 1309K 12%
-"""
+        header = (
+            "page num type width height color comp bpc enc interp "
+            "object ID x-ppi y-ppi size ratio"
+        )
+        image_row = "1 0 image 1636 2367 icc 3 8 jpeg yes 5 0 72 72 1309K 12%"
+        output = f"{header}\n{'-' * len(header)}\n{image_row}\n"
 
         records = parse_pdfimages(output)
 

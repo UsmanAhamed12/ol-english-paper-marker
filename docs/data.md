@@ -143,7 +143,7 @@ attribute errors to OCR, segmentation, retrieval, grading, or aggregation.
 Run the read-only inspection script from the repository root:
 
 ```bash
-python3 scripts/inspect_dataset.py
+uv run python scripts/inspect_dataset.py
 ```
 
 The script requires Poppler's `pdfinfo`, `pdftotext`, and `pdfimages` commands.
