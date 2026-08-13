@@ -7,8 +7,9 @@
 - Poppler commands (`pdfinfo`, `pdftotext`, and `pdfimages`) are needed only to
   reproduce the Phase 0 structural dataset inventory.
 
-PyMuPDF is installed by `uv sync` for Phase 2 PDF validation and rendering. No
-Ollama, database, vector store, OCR, or UI service is required in Phase 2.
+PyMuPDF is installed by `uv sync` for PDF validation and rendering. Phase 3's
+OCR architecture adds no dependency and requires no OCR engine. No Ollama,
+database, vector store, OCR engine, or UI service is required.
 
 ## Python 3.12 environment
 

@@ -23,3 +23,11 @@ class PDFPageLimitError(InvalidPDFError):
 
 class PDFRenderingError(ApplicationError):
     """Raised when validated PDF pages cannot be rendered safely."""
+
+
+class OCRProcessingError(ApplicationError):
+    """Raised when OCR cannot produce a valid page or document result."""
+
+
+class OCRProviderError(OCRProcessingError):
+    """Raised when an OCR provider fails or violates its contract."""

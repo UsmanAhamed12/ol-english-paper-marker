@@ -6,7 +6,7 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 2 - PDF ingestion.**
+**Phase 3 - OCR provider architecture.**
 
 The repository currently provides:
 
@@ -17,11 +17,14 @@ The repository currently provides:
 - pytest, Ruff, mypy, and coverage configuration;
 - a read-only Phase 0 dataset inventory tool and documented findings;
 - parser-backed PDF validation and safe internal paper identifiers;
-- immutable paper/page metadata and deterministic PNG page rendering.
+- immutable paper/page metadata and deterministic PNG page rendering;
+- provider-independent OCR contracts, conservative normalization, provenance,
+  and service-level error handling.
 
-OCR, question segmentation, marking-scheme ingestion, retrieval, grading,
-LangChain, LangGraph, PostgreSQL, Chroma, Ollama integration, and Streamlit are
-planned but are not implemented.
+No real OCR engine or handwriting recognition is implemented. OCR provider
+experiments, question segmentation, marking-scheme ingestion, retrieval,
+grading, LangChain, LangGraph, PostgreSQL, Chroma, Ollama integration, and
+Streamlit are planned for later phases.
 
 ## Problem statement
 
@@ -97,4 +100,5 @@ uv run mypy app
 
 Further setup and workflow guidance is in [docs/setup.md](docs/setup.md) and
 [docs/development.md](docs/development.md). The implemented ingestion boundary
-is documented in [docs/ingestion.md](docs/ingestion.md).
+is documented in [docs/ingestion.md](docs/ingestion.md), and the OCR contracts
+are documented in [docs/ocr.md](docs/ocr.md).

@@ -23,16 +23,16 @@ uv run command
 ```
 
 Do not use Poetry, Conda, or direct `pip` installs. Add a dependency only in the
-phase that needs it. The current Phase 1 dependency set intentionally excludes
-all AI, OCR, database, vector-store, and UI integrations.
+phase that needs it. The current dependency set intentionally excludes AI and
+OCR engines, database, vector-store, and UI integrations.
 
 ## Code boundaries
 
 The implemented package currently includes `app.core`, focused paper domain
-models, and the PDF ingestion boundary. Future modules should be created only
-when their phase requires them. Keep configuration, logging, and shared
-exceptions small; introduce domain-specific exceptions with the domain feature
-that needs them.
+models, PDF ingestion, and provider-independent OCR contracts. Future modules
+should be created only when their phase requires them. Keep configuration,
+logging, and shared exceptions small; introduce domain-specific exceptions with
+the domain feature that needs them.
 
 ## Configuration and logging
 
