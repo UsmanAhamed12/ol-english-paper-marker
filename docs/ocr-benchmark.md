@@ -66,7 +66,22 @@ Ground truth must be manually transcribed by a human from the student answer.
 An LLM or OCR model must never create or repair benchmark ground truth. Printed
 question text and teacher marks are excluded. Student spelling and grammar
 errors remain exactly as written. A verified transcription may legitimately be
-an empty string for a blank response; `null` means transcription is unavailable.
+an empty string only with the explicit `human_verified_empty` state; `null`
+means transcription is pending. A blank field never implies a verified-empty
+target.
+
+Phase 4A.2 freezes the authoritative human worksheet into the ignored private
+manifest. `human_verified` requires non-empty manually entered text, while
+`human_verified_empty` requires an explicit human decision and an empty string.
+The transfer preserves spelling, grammar, capitalization, punctuation, and
+internal newlines. Non-text visual marks can be retained in notes without being
+added to CER/WER ground truth.
+
+The frozen manifest has a deterministic SHA-256 fingerprint over a versioned,
+canonical representation of sample ID, verification state, and student text.
+This detects accidental changes between experiments; it is not encryption or a
+privacy control. The validation command reports only safe counts, readiness,
+and the fingerprint, never student text.
 
 The committed JSON fixture under `tests/fixtures/` contains synthetic text only
 and demonstrates the schema without disclosing student data.
@@ -77,10 +92,11 @@ Regions use page-pixel coordinates: `x`, `y`, `width`, and `height`. Coordinates
 must be non-negative, dimensions positive, and the rectangle contained within
 the recorded page dimensions. A missing region means full-page evaluation.
 
-Phase 4A validates region metadata but does not crop images. In Phase 4B, a
-region sample must be materialized as a derived input or in-memory crop before
-being passed to the runner. Canonical Phase 2 page images must never be
-overwritten. Full-page and region results must retain distinct sample IDs.
+Phase 4A.1 materializes each region as a derived private PNG for manual
+transcription. It uses the existing Phase 2 ingestion and rendering boundary
+when a canonical page is absent, validates coordinates against actual rendered
+dimensions, and verifies that canonical images remain unchanged. Full-page and
+region results retain distinct sample IDs.
 
 ## Metric policy
 
@@ -148,9 +164,24 @@ Validate the private manifest without running OCR:
 uv run python -m scripts.benchmark_ocr validate
 ```
 
-The command prints only schema version and aggregate ready/pending counts. It
-does not print transcription content, paths, aliases, or notes, and reports
+The command prints only schema version, human-verified/verified-empty/pending
+counts, readiness, and the ground-truth fingerprint. It does not print
+transcription content, paths, aliases, or notes, and reports
 `ocr_executed: false`.
+
+Prepare or refresh the ignored sample images and create the blank private
+transcription worksheet:
+
+```bash
+uv run python -m scripts.prepare_ocr_benchmark
+```
+
+The helper reads the ignored safe-alias source mapping, renders missing pages
+through `PDFValidator`, `PDFLoader`, and `PDFRenderer`, and writes deterministic
+`sample_001.png` style filenames under `data/evaluation/ocr/samples/`. It is
+idempotent: images are reproducibly refreshed, while an existing worksheet is
+never overwritten so later human transcription is preserved. It performs no
+OCR and prints no original source filenames.
 
 ## Phase 4B selection criteria
 
@@ -172,7 +203,8 @@ provider. Comparisons must record exact provider/model and OCR prompt versions.
 - all private candidate samples still require human selection confirmation and
   transcription;
 - teacher contamination is manually assessed;
-- region materialization belongs to Phase 4B;
+- region coordinates and candidate categories still require human visual
+  confirmation before benchmarking;
 - CER and WER do not measure semantic equivalence or layout quality;
 - the small benchmark will estimate comparative performance, not prove broad
   population-level accuracy.

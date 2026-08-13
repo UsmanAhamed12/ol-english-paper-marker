@@ -31,3 +31,7 @@ class OCRProcessingError(ApplicationError):
 
 class OCRProviderError(OCRProcessingError):
     """Raised when an OCR provider fails or violates its contract."""
+
+
+class OCRBenchmarkPreparationError(ApplicationError):
+    """Raised when private OCR benchmark samples cannot be prepared safely."""

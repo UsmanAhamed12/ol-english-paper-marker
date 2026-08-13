@@ -31,6 +31,7 @@ class GroundTruthStatus(StrEnum):
 
     PENDING = "pending_manual_transcription"
     VERIFIED = "human_verified"
+    VERIFIED_EMPTY = "human_verified_empty"
 
 
 class BenchmarkStatus(StrEnum):
@@ -76,11 +77,17 @@ class OCRBenchmarkSample(BaseModel):
     def validate_ground_truth_and_region(self) -> OCRBenchmarkSample:
         """Require human evidence for scoring and keep regions within the page."""
 
-        if (
-            self.ground_truth_status is GroundTruthStatus.VERIFIED
-            and self.ground_truth_student_text is None
+        if self.ground_truth_status is GroundTruthStatus.VERIFIED and (
+            self.ground_truth_student_text is None
+            or not self.ground_truth_student_text.strip()
         ):
-            raise ValueError("verified ground truth requires a manual transcription")
+            raise ValueError(
+                "verified ground truth requires non-empty manual transcription"
+            )
+        if self.ground_truth_status is GroundTruthStatus.VERIFIED_EMPTY and (
+            self.ground_truth_student_text != ""
+        ):
+            raise ValueError("verified-empty ground truth must be an empty string")
         if (
             self.ground_truth_status is GroundTruthStatus.PENDING
             and self.ground_truth_student_text is not None
@@ -97,10 +104,10 @@ class OCRBenchmarkSample(BaseModel):
     def is_ready(self) -> bool:
         """Return whether this sample may be used for metric scoring."""
 
-        return (
-            self.ground_truth_status is GroundTruthStatus.VERIFIED
-            and self.ground_truth_student_text is not None
-        )
+        return self.ground_truth_status in {
+            GroundTruthStatus.VERIFIED,
+            GroundTruthStatus.VERIFIED_EMPTY,
+        }
 
 
 class BenchmarkManifest(BaseModel):
@@ -119,6 +126,12 @@ class BenchmarkManifest(BaseModel):
         if len(sample_ids) != len(set(sample_ids)):
             raise ValueError("benchmark sample IDs must be unique")
         return self
+
+    @property
+    def is_ready(self) -> bool:
+        """Return whether every sample has explicit human verification."""
+
+        return all(sample.is_ready for sample in self.samples)
 
 
 class ErrorRate(BaseModel):
