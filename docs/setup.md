@@ -8,8 +8,9 @@
   reproduce the Phase 0 structural dataset inventory.
 
 PyMuPDF is installed by `uv sync` for PDF validation and rendering. Phase 3's
-OCR architecture adds no dependency and requires no OCR engine. No Ollama,
-database, vector store, OCR engine, or UI service is required.
+OCR architecture and Phase 4A's benchmark framework add no dependencies and
+require no OCR engine. No Ollama, database, vector store, OCR engine, or UI
+service is required.
 
 ## Python 3.12 environment
 

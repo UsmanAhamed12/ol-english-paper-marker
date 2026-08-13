@@ -6,7 +6,7 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 3 - OCR provider architecture.**
+**Phase 4A - OCR benchmark foundation.**
 
 The repository currently provides:
 
@@ -19,12 +19,14 @@ The repository currently provides:
 - parser-backed PDF validation and safe internal paper identifiers;
 - immutable paper/page metadata and deterministic PNG page rendering;
 - provider-independent OCR contracts, conservative normalization, provenance,
-  and service-level error handling.
+  and service-level error handling;
+- private benchmark manifest contracts, optional page regions, deterministic
+  CER/WER metrics, failure-preserving results, and aggregate reporting.
 
 No real OCR engine or handwriting recognition is implemented. OCR provider
-experiments, question segmentation, marking-scheme ingestion, retrieval,
-grading, LangChain, LangGraph, PostgreSQL, Chroma, Ollama integration, and
-Streamlit are planned for later phases.
+experiments begin in Phase 4B. Question segmentation, marking-scheme ingestion,
+retrieval, grading, LangChain, LangGraph, PostgreSQL, Chroma, Ollama integration,
+and Streamlit are planned for later phases.
 
 ## Problem statement
 
@@ -101,4 +103,5 @@ uv run mypy app
 Further setup and workflow guidance is in [docs/setup.md](docs/setup.md) and
 [docs/development.md](docs/development.md). The implemented ingestion boundary
 is documented in [docs/ingestion.md](docs/ingestion.md), and the OCR contracts
-are documented in [docs/ocr.md](docs/ocr.md).
+are documented in [docs/ocr.md](docs/ocr.md). Benchmark policy and metrics are
+documented in [docs/ocr-benchmark.md](docs/ocr-benchmark.md).

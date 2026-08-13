@@ -123,14 +123,18 @@ filtering can trace exactly what was processed. This provenance prepares for,
 but does not solve, the leakage problem. Normal runtime papers are expected to
 be unmarked.
 
-## Phase 4 experiment direction
+## Phase 4A benchmark foundation
 
-Phase 4 may implement and compare local provider adapters against representative
-printed, handwritten, corrected, and low-quality pages. Experiments should
-measure OCR quality separately from segmentation and grading, compare
-provider-specific resizing where justified, preserve raw outputs, and record
-provider/model versions. The final provider must not be selected without
-evidence.
+Phase 4A now provides typed private benchmark manifests, optional pixel-region
+metadata, deterministic CER/WER metrics, failure-preserving results, aggregation,
+and an `OCRService`-based benchmark runner. The framework is documented in
+[ocr-benchmark.md](ocr-benchmark.md). It adds no real OCR provider and declares
+no winning model.
+
+Phase 4B may implement and compare local provider adapters against
+representative printed, handwritten, corrected, and low-quality pages.
+Experiments must preserve raw outputs, record provider/model and prompt versions,
+and select a provider from dataset evidence rather than popularity.
 
 ## Not implemented
 

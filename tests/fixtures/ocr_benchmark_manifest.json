@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "samples": [
+    {
+      "sample_id": "synthetic-sample-01",
+      "paper_alias": "synthetic-paper-a",
+      "page_number": 1,
+      "image_path": "synthetic/page_0001.png",
+      "image_width": 1000,
+      "image_height": 1400,
+      "region": {
+        "x": 100,
+        "y": 200,
+        "width": 700,
+        "height": 400
+      },
+      "difficulty": "medium",
+      "categories": ["short-answer"],
+      "printed_content_present": true,
+      "teacher_annotations_present": false,
+      "transcription_target": "student_answer_text",
+      "ground_truth_status": "human_verified",
+      "ground_truth_student_text": "This is synthetic text, not student data.",
+      "notes": "Committed schema fixture containing synthetic content only."
+    }
+  ]
+}

@@ -29,10 +29,16 @@ OCR engines, database, vector-store, and UI integrations.
 ## Code boundaries
 
 The implemented package currently includes `app.core`, focused paper domain
-models, PDF ingestion, and provider-independent OCR contracts. Future modules
-should be created only when their phase requires them. Keep configuration,
-logging, and shared exceptions small; introduce domain-specific exceptions with
-the domain feature that needs them.
+models, PDF ingestion, provider-independent OCR contracts, and the OCR benchmark
+boundary. Future modules should be created only when their phase requires them.
+Keep configuration, logging, and shared exceptions small; introduce
+domain-specific exceptions with the domain feature that needs them.
+
+Validate the ignored private OCR benchmark manifest without running OCR:
+
+```bash
+uv run python -m scripts.benchmark_ocr validate
+```
 
 ## Configuration and logging
 
