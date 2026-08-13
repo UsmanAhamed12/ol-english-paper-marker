@@ -8,7 +8,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.ocr.models import OCRWarningCode
+from app.ocr.models import OCRStructuredEvidence, OCRWarningCode
+from app.ocr.preprocessing.models import PreprocessingResult
 
 SafeIdentifier = Annotated[
     str,
@@ -171,6 +172,8 @@ class OCRBenchmarkResult(BaseModel):
     wer: ErrorRate | None = None
     duration_ms: NonNegativeFloat | None = None
     warnings: tuple[OCRWarningCode, ...] = ()
+    evidence: OCRStructuredEvidence | None = None
+    preprocessing: PreprocessingResult | None = None
     teacher_annotation_contamination: bool | None = None
     error: str | None = None
 
@@ -182,7 +185,12 @@ class OCRBenchmarkResult(BaseModel):
         if self.status is BenchmarkStatus.SUCCESS:
             if any(value is None for value in success_fields) or self.error is not None:
                 raise ValueError("successful results require metrics and no error")
-        elif self.error is None or any(value is not None for value in success_fields):
+        elif (
+            self.error is None
+            or any(value is not None for value in success_fields)
+            or self.evidence is not None
+            or self.preprocessing is not None
+        ):
             raise ValueError("failed results require an error and no metrics")
         return self
 
@@ -200,6 +208,10 @@ class OCRBenchmarkSummary(BaseModel):
     mean_wer: NonNegativeFloat | None
     median_wer: NonNegativeFloat | None
     mean_processing_duration_ms: NonNegativeFloat | None
+    median_processing_duration_ms: NonNegativeFloat | None = None
+    mean_preprocessing_duration_ms: NonNegativeFloat | None = None
+    median_preprocessing_duration_ms: NonNegativeFloat | None = None
+    empty_successful_predictions: Annotated[int, Field(ge=0)] = 0
 
     @model_validator(mode="after")
     def counts_must_balance(self) -> OCRBenchmarkSummary:
@@ -207,4 +219,17 @@ class OCRBenchmarkSummary(BaseModel):
 
         if self.successful_samples + self.failed_samples != self.total_samples:
             raise ValueError("successful and failed counts must equal total samples")
+        if self.empty_successful_predictions > self.successful_samples:
+            raise ValueError("empty predictions cannot exceed successful samples")
         return self
+
+
+class OCRBenchmarkMetricDelta(BaseModel):
+    """Variant metric changes where negative error deltas mean improvement."""
+
+    model_config = ConfigDict(frozen=True)
+
+    mean_cer: float | None
+    median_cer: float | None
+    mean_wer: float | None
+    median_wer: float | None

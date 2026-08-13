@@ -5,9 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
+from app.core.exceptions import ConfigurationError
+from app.evaluation.ocr_benchmark.manifest import load_manifest
 from app.evaluation.ocr_benchmark.models import GroundTruthStatus
+from app.ocr.preprocessing.models import PreprocessingVariant
 from scripts import benchmark_ocr
 
 
@@ -67,3 +71,79 @@ def test_validate_ready_manifest_never_prints_private_text(
     assert report["benchmark_ready"] is True
     assert report["ground_truth_fingerprint"] is not None
     assert private_text not in output
+
+
+def test_run_cli_rejects_unsupported_provider() -> None:
+    with pytest.raises(SystemExit):
+        benchmark_ocr.parse_args(
+            ["run", "--provider", "cloud", "--model", "synthetic:1b"]
+        )
+
+
+def test_run_cli_requires_a_model() -> None:
+    args = benchmark_ocr.parse_args(["run", "--provider", "ollama"])
+    assert args.model is None
+
+
+def test_run_cli_accepts_tesseract_without_model() -> None:
+    args = benchmark_ocr.parse_args(["run", "--provider", "tesseract", "--smoke"])
+    assert args.provider == "tesseract"
+    assert args.model is None
+    assert args.smoke is True
+    assert args.preprocessing == "none"
+
+
+def test_run_cli_accepts_fixed_preprocessing_variant() -> None:
+    args = benchmark_ocr.parse_args(
+        ["run", "--provider", "tesseract", "--preprocessing", "grayscale-denoise"]
+    )
+    assert args.preprocessing == "grayscale-denoise"
+    assert (
+        benchmark_ocr.tesseract_result_name(PreprocessingVariant.GRAYSCALE_DENOISE)
+        == "tesseract-grayscale-denoise"
+    )
+
+
+def test_run_cli_rejects_unknown_preprocessing_variant() -> None:
+    with pytest.raises(SystemExit):
+        benchmark_ocr.parse_args(
+            ["run", "--provider", "tesseract", "--preprocessing", "aggressive"]
+        )
+
+
+def test_cli_does_not_print_private_validation_errors(
+    tmp_path: Path,
+    capsys: CaptureFixture[str],
+) -> None:
+    private_text = "synthetic-private-marker"
+    invalid = tmp_path / "private-invalid.json"
+    invalid.write_text(private_text, encoding="utf-8")
+
+    assert benchmark_ocr.main(["validate", str(invalid)]) == 2
+
+    output = capsys.readouterr().out
+    assert private_text not in output
+    assert "validation or execution failed" in output
+
+
+def test_frozen_benchmark_requires_all_eight_samples() -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "ocr_benchmark_manifest.json"
+    manifest = load_manifest(fixture)
+
+    with pytest.raises(ConfigurationError, match="not ready"):
+        benchmark_ocr._require_frozen_benchmark(
+            manifest,
+            benchmark_ocr.FROZEN_BENCHMARK_FINGERPRINT,
+        )
+
+
+def test_empty_behavior_counts_only_executed_results() -> None:
+    fixture = Path(__file__).parents[1] / "fixtures" / "ocr_benchmark_manifest.json"
+    manifest = load_manifest(fixture)
+
+    assert benchmark_ocr._verified_empty_behavior(manifest, ()) == {
+        "sample_count": 0,
+        "empty_predictions": 0,
+        "nonempty_predictions": 0,
+        "failed": 0,
+    }

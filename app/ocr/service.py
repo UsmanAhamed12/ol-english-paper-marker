@@ -48,6 +48,8 @@ class OCRService:
                 model_version=self._provider.model_version,
                 warnings=extraction.warnings,
                 processing_duration_ms=extraction.processing_duration_ms,
+                evidence=extraction.evidence,
+                preprocessing=extraction.preprocessing,
             )
         except (ValidationError, ValueError) as error:
             raise OCRProviderError(

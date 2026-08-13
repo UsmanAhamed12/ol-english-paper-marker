@@ -33,5 +33,9 @@ class OCRProviderError(OCRProcessingError):
     """Raised when an OCR provider fails or violates its contract."""
 
 
+class ImagePreprocessingError(OCRProcessingError):
+    """Raised when a derived OCR image cannot be produced safely."""
+
+
 class OCRBenchmarkPreparationError(ApplicationError):
     """Raised when private OCR benchmark samples cannot be prepared safely."""

@@ -141,6 +141,29 @@ report:
 - mean and median CER;
 - mean and median WER;
 - mean successful processing duration.
+- median successful processing duration and empty-success count.
+
+## Phase 4C.1 measured baseline
+
+The frozen Tesseract 5.5.2 baseline completed 8/8 samples with mean/median CER
+6.4043/6.0670, mean/median WER 8.2470/8.9847, and mean/median duration
+1.961/1.906 seconds. Both verified-empty regions produced non-empty OCR. The
+fixed configuration was English, PSM 6, a 120-second timeout, and no
+preprocessing. Predictions and typed evidence remain private.
+
+Qwen3-VL 4B completed 7/8 with mean/median CER and WER of 1.0, mean successful
+duration about 393 seconds, and non-empty output on both verified-empty regions.
+Neither result selects a student-handwriting provider: Tesseract is far faster
+and structurally useful, while Qwen was less inaccurate but still failed the
+student-only objective. See [tesseract-ocr.md](tesseract-ocr.md).
+
+## Phase 4C.2 preprocessing result
+
+Four geometry-preserving OpenCV variants reused the exact frozen samples and
+metrics. All completed 8/8 but worsened aggregate CER/WER and still produced
+non-empty OCR for both verified-empty targets. No variant was selected; the
+official baseline was not replaced. Aggregate measurements and deltas are in
+[ocr-preprocessing.md](ocr-preprocessing.md).
 
 ## Teacher-annotation contamination
 

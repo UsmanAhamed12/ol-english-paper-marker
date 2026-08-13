@@ -9,6 +9,7 @@ from app.domain.models.paper import PaperPage
 from app.evaluation.ocr_benchmark.metrics import calculate_cer, calculate_wer
 from app.evaluation.ocr_benchmark.models import (
     BenchmarkStatus,
+    OCRBenchmarkMetricDelta,
     OCRBenchmarkResult,
     OCRBenchmarkSample,
     OCRBenchmarkSummary,
@@ -73,6 +74,8 @@ class OCRBenchmarkRunner:
             ),
             duration_ms=ocr_result.processing_duration_ms,
             warnings=ocr_result.warnings,
+            evidence=ocr_result.evidence,
+            preprocessing=ocr_result.preprocessing,
         )
 
     @staticmethod
@@ -97,6 +100,11 @@ class OCRBenchmarkRunner:
         durations = [
             result.duration_ms for result in successes if result.duration_ms is not None
         ]
+        preprocessing_durations = [
+            result.preprocessing.processing_duration_ms
+            for result in successes
+            if result.preprocessing is not None
+        ]
         return OCRBenchmarkSummary(
             total_samples=len(results),
             successful_samples=len(successes),
@@ -106,4 +114,32 @@ class OCRBenchmarkRunner:
             mean_wer=fmean(wer_rates) if wer_rates else None,
             median_wer=median(wer_rates) if wer_rates else None,
             mean_processing_duration_ms=fmean(durations) if durations else None,
+            median_processing_duration_ms=median(durations) if durations else None,
+            mean_preprocessing_duration_ms=(
+                fmean(preprocessing_durations) if preprocessing_durations else None
+            ),
+            median_preprocessing_duration_ms=(
+                median(preprocessing_durations) if preprocessing_durations else None
+            ),
+            empty_successful_predictions=sum(
+                result.prediction == "" for result in successes
+            ),
         )
+
+
+def metric_delta(
+    baseline: OCRBenchmarkSummary,
+    variant: OCRBenchmarkSummary,
+) -> OCRBenchmarkMetricDelta:
+    """Compare error summaries without changing the benchmark metric policy."""
+
+    return OCRBenchmarkMetricDelta(
+        mean_cer=_difference(variant.mean_cer, baseline.mean_cer),
+        median_cer=_difference(variant.median_cer, baseline.median_cer),
+        mean_wer=_difference(variant.mean_wer, baseline.mean_wer),
+        median_wer=_difference(variant.median_wer, baseline.median_wer),
+    )
+
+
+def _difference(value: float | None, baseline: float | None) -> float | None:
+    return None if value is None or baseline is None else value - baseline

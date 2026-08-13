@@ -16,8 +16,9 @@ from app.evaluation.ocr_benchmark.models import (
     GroundTruthStatus,
     OCRBenchmarkResult,
     OCRBenchmarkSample,
+    OCRBenchmarkSummary,
 )
-from app.evaluation.ocr_benchmark.runner import OCRBenchmarkRunner
+from app.evaluation.ocr_benchmark.runner import OCRBenchmarkRunner, metric_delta
 from app.ocr.models import OCRExtraction, OCRWarningCode
 
 
@@ -165,3 +166,39 @@ def test_summary_reports_mean_median_duration_and_counts() -> None:
     assert summary.mean_wer == pytest.approx(0.6)
     assert summary.median_wer == pytest.approx(0.6)
     assert summary.mean_processing_duration_ms == pytest.approx(30)
+    assert summary.median_processing_duration_ms == pytest.approx(30)
+    assert summary.empty_successful_predictions == 0
+
+
+def test_summary_counts_empty_successes_explicitly() -> None:
+    empty = _result("synthetic-sample-01", 1.0, 1.0, 10).model_copy(
+        update={"prediction": ""}
+    )
+
+    summary = OCRBenchmarkRunner.summarize((empty,))
+
+    assert summary.successful_samples == 1
+    assert summary.empty_successful_predictions == 1
+
+
+def test_metric_delta_reports_improvement_as_negative() -> None:
+    baseline = OCRBenchmarkSummary(
+        total_samples=8,
+        successful_samples=8,
+        failed_samples=0,
+        mean_cer=6.0,
+        median_cer=5.0,
+        mean_wer=8.0,
+        median_wer=7.0,
+        mean_processing_duration_ms=100,
+    )
+    variant = baseline.model_copy(
+        update={"mean_cer": 5.5, "median_cer": 4.8, "mean_wer": 7.0}
+    )
+
+    delta = metric_delta(baseline, variant)
+
+    assert delta.mean_cer == pytest.approx(-0.5)
+    assert delta.median_cer == pytest.approx(-0.2)
+    assert delta.mean_wer == pytest.approx(-1.0)
+    assert delta.median_wer == 0.0

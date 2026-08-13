@@ -28,6 +28,10 @@ def test_settings_load_safe_local_defaults(
     assert settings.max_pdf_size_mb == 50
     assert settings.max_pdf_pages == 100
     assert settings.pdf_render_dpi == 150
+    assert settings.ollama_ocr_timeout_seconds == 900.0
+    assert settings.tesseract_language == "eng"
+    assert settings.tesseract_psm == 6
+    assert settings.tesseract_timeout_seconds == 120.0
 
 
 def test_environment_variables_override_defaults(
@@ -63,6 +67,9 @@ def test_environment_variables_override_defaults(
         ("MAX_PDF_SIZE_MB", "0"),
         ("MAX_PDF_PAGES", "0"),
         ("PDF_RENDER_DPI", "601"),
+        ("OLLAMA_OCR_TIMEOUT_SECONDS", "0"),
+        ("TESSERACT_PSM", "14"),
+        ("TESSERACT_TIMEOUT_SECONDS", "0"),
     ],
 )
 def test_invalid_environment_configuration_is_rejected(

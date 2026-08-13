@@ -34,6 +34,9 @@ PositiveTopK = Annotated[int, Field(ge=1, le=100)]
 PositiveMegabytes = Annotated[int, Field(ge=1, le=1024)]
 PositivePageLimit = Annotated[int, Field(ge=1, le=1000)]
 RenderDPI = Annotated[int, Field(ge=72, le=600)]
+OllamaTimeoutSeconds = Annotated[float, Field(gt=0.0, le=3600.0)]
+TesseractPSM = Annotated[int, Field(ge=0, le=13)]
+TesseractTimeoutSeconds = Annotated[float, Field(gt=0.0, le=600.0)]
 
 
 class Settings(BaseSettings):
@@ -56,6 +59,10 @@ class Settings(BaseSettings):
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     ollama_grading_model: str = "llama2"
     ollama_ocr_model: str | None = None
+    ollama_ocr_timeout_seconds: OllamaTimeoutSeconds = 900.0
+    tesseract_language: str = "eng"
+    tesseract_psm: TesseractPSM = 6
+    tesseract_timeout_seconds: TesseractTimeoutSeconds = 120.0
 
     chroma_persist_dir: Path = Path("data/chroma")
 

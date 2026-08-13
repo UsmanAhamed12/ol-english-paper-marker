@@ -6,7 +6,7 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 4A - OCR benchmark foundation.**
+**Phase 4C.2 - OCR image preprocessing experiment.**
 
 The repository currently provides:
 
@@ -22,11 +22,16 @@ The repository currently provides:
   and service-level error handling;
 - private benchmark manifest contracts, optional page regions, deterministic
   CER/WER metrics, failure-preserving results, and aggregate reporting.
+- local Tesseract OCR with typed word boxes, hierarchy metadata, confidence,
+  and deterministic layout reconstruction.
+- typed, geometry-preserving OpenCV preprocessing experiments with immutable
+  canonical images and private derived artifacts.
 
-No real OCR engine or handwriting recognition is implemented. OCR provider
-experiments begin in Phase 4B. Question segmentation, marking-scheme ingestion,
-retrieval, grading, LangChain, LangGraph, PostgreSQL, Chroma, Ollama integration,
-and Streamlit are planned for later phases.
+Plain Tesseract has been measured as a fast layout/printed-text baseline; it is
+not selected as a handwriting solution. Four fixed preprocessing variants were
+measured and none beat the official baseline, so preprocessing remains disabled.
+Question segmentation, marking-scheme ingestion, retrieval, grading, LangChain,
+LangGraph, PostgreSQL, Chroma, and Streamlit are planned for later phases.
 
 ## Problem statement
 
@@ -104,4 +109,7 @@ Further setup and workflow guidance is in [docs/setup.md](docs/setup.md) and
 [docs/development.md](docs/development.md). The implemented ingestion boundary
 is documented in [docs/ingestion.md](docs/ingestion.md), and the OCR contracts
 are documented in [docs/ocr.md](docs/ocr.md). Benchmark policy and metrics are
-documented in [docs/ocr-benchmark.md](docs/ocr-benchmark.md).
+documented in [docs/ocr-benchmark.md](docs/ocr-benchmark.md), and the classical
+baseline is documented in [docs/tesseract-ocr.md](docs/tesseract-ocr.md).
+The measured preprocessing experiment is documented in
+[docs/ocr-preprocessing.md](docs/ocr-preprocessing.md).

@@ -7,10 +7,20 @@
 - Poppler commands (`pdfinfo`, `pdftotext`, and `pdfimages`) are needed only to
   reproduce the Phase 0 structural dataset inventory.
 
-PyMuPDF is installed by `uv sync` for PDF validation and rendering. Phase 3's
-OCR architecture and Phase 4A's benchmark framework add no dependencies and
-require no OCR engine. No Ollama, database, vector store, OCR engine, or UI
-service is required.
+PyMuPDF is installed by `uv sync` for PDF validation and rendering. The
+Tesseract baseline uses `pytesseract` and requires a local executable with
+English trained data:
+
+```bash
+brew install tesseract
+tesseract --version
+tesseract --list-langs
+uv sync
+```
+
+`opencv-python-headless` is installed by `uv sync` for the Phase 4C.2
+derived-image experiment. It does not require GUI frameworks. No database,
+vector store, alternate Poppler rendering, or UI service is required.
 
 ## Python 3.12 environment
 
@@ -42,6 +52,9 @@ their services do not exist yet.
 PDF ingestion additionally supports `MAX_PDF_SIZE_MB`, `MAX_PDF_PAGES`,
 `PDF_RENDER_DPI`, and `RUNTIME_DATA_DIR`. See `docs/ingestion.md` for defaults
 and constraints.
+
+Classical OCR supports `TESSERACT_LANGUAGE` (default `eng`), `TESSERACT_PSM`
+(default `6`), and `TESSERACT_TIMEOUT_SECONDS` (default `120`).
 
 ## Verification
 

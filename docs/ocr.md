@@ -23,9 +23,9 @@ PaperPage
 optional `model_version`, and `extract_page(PaperPage)`. Application code
 depends on this contract rather than an engine-specific SDK.
 
-No production provider module exists yet. Deterministic fake providers live in
-tests and prove that providers can be replaced without changing `OCRService` or
-downstream result consumers.
+Production adapters now include local Ollama vision OCR and plain Tesseract.
+Both use the same `OCRService`; deterministic fake clients keep unit tests
+offline.
 
 ## Result models and provenance
 
@@ -35,6 +35,7 @@ downstream result consumers.
 - optional confidence;
 - typed non-fatal warning codes;
 - provider-measured processing duration.
+- optional provider-independent typed word evidence.
 
 `OCRPageResult` adds normalized text and durable provenance:
 
@@ -136,11 +137,27 @@ representative printed, handwritten, corrected, and low-quality pages.
 Experiments must preserve raw outputs, record provider/model and prompt versions,
 and select a provider from dataset evidence rather than popularity.
 
+## Phase 4C.1 Tesseract baseline
+
+Tesseract adds word boxes, normalized engine confidence, hierarchy metadata,
+and deterministic line/paragraph reconstruction without preprocessing or
+authorship classification. See [tesseract-ocr.md](tesseract-ocr.md) for
+measured results and limitations.
+
+## Phase 4C.2 preprocessing experiment
+
+OpenCV preprocessing now lives behind a separate `ImagePreprocessor` boundary
+and composes in front of the unchanged Tesseract provider. Derived images retain
+source dimensions and typed operation/duration provenance; canonical page
+images are hash-checked and never overwritten. Four fixed variants all
+regressed on aggregate CER/WER, so `none` remains selected. See
+[ocr-preprocessing.md](ocr-preprocessing.md).
+
 ## Not implemented
 
-- no real OCR or vision provider;
-- no Ollama, LangChain, or LangGraph integration;
-- no image preprocessing pipeline;
+- no selected handwriting OCR solution;
+- no LangChain or LangGraph integration;
+- no adopted preprocessing variant (experimental derived-image support exists);
 - no handwriting recognition claim;
 - no teacher-mark removal;
 - no retries, concurrency, persistence, segmentation, or grading.

@@ -23,8 +23,9 @@ uv run command
 ```
 
 Do not use Poetry, Conda, or direct `pip` installs. Add a dependency only in the
-phase that needs it. The current dependency set intentionally excludes AI and
-OCR engines, database, vector-store, and UI integrations.
+phase that needs it. The current dependency set intentionally excludes AI
+frameworks, database, vector-store, and UI integrations. OpenCV headless
+supports the measured OCR preprocessing experiment only.
 
 ## Code boundaries
 
@@ -32,13 +33,27 @@ The implemented package currently includes `app.core`, focused paper domain
 models, PDF ingestion, provider-independent OCR contracts, and the OCR benchmark
 boundary. Future modules should be created only when their phase requires them.
 Keep configuration, logging, and shared exceptions small; introduce
-domain-specific exceptions with the domain feature that needs them.
+domain-specific exceptions with the domain feature that needs them. The
+Tesseract adapter consumes canonical `PaperPage.image_path` values; do not add
+an alternative PDF rendering stack.
 
 Validate the ignored private OCR benchmark manifest without running OCR:
 
 ```bash
 uv run python -m scripts.benchmark_ocr validate
 ```
+
+Run the private classical baseline only after validation:
+
+```bash
+uv run python -m scripts.benchmark_ocr run --provider tesseract --smoke
+uv run python -m scripts.benchmark_ocr run --provider tesseract
+uv run python -m scripts.benchmark_ocr run --provider tesseract \
+  --preprocessing grayscale-denoise-threshold
+```
+
+The third command writes only ignored derived/result artifacts. The official
+baseline remains `--preprocessing none`; no experimental variant is selected.
 
 ## Configuration and logging
 

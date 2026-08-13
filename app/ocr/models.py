@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.ocr.preprocessing.models import PreprocessingResult
 
 Confidence = Annotated[float, Field(ge=0.0, le=1.0)]
 DurationMilliseconds = Annotated[float, Field(ge=0.0)]
@@ -23,6 +25,53 @@ class OCRWarningCode(StrEnum):
     IMAGE_RESOLUTION_CONCERN = "image_resolution_concern"
 
 
+class BoundingBox(BaseModel):
+    """Pixel rectangle locating provider-independent OCR evidence."""
+
+    model_config = ConfigDict(frozen=True)
+
+    x: Annotated[int, Field(ge=0)]
+    y: Annotated[int, Field(ge=0)]
+    width: Annotated[int, Field(gt=0)]
+    height: Annotated[int, Field(gt=0)]
+
+
+class OCRWord(BaseModel):
+    """One recognized token with spatial and reading-order evidence."""
+
+    model_config = ConfigDict(frozen=True)
+
+    text: NonBlankString
+    confidence: Confidence | None = None
+    bbox: BoundingBox
+    block_number: Annotated[int, Field(gt=0)] | None = None
+    paragraph_number: Annotated[int, Field(gt=0)] | None = None
+    line_number: Annotated[int, Field(gt=0)] | None = None
+    word_number: Annotated[int, Field(gt=0)] | None = None
+
+    @field_validator("text")
+    @classmethod
+    def text_must_not_be_whitespace(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("OCR word text must not be whitespace")
+        return value
+
+
+class OCRStructuredEvidence(BaseModel):
+    """Typed word evidence and deterministic approximate layout text."""
+
+    model_config = ConfigDict(frozen=True)
+
+    words: tuple[OCRWord, ...] = ()
+    layout_text: str = ""
+
+    @model_validator(mode="after")
+    def empty_words_require_empty_layout(self) -> OCRStructuredEvidence:
+        if not self.words and self.layout_text:
+            raise ValueError("layout text requires word evidence")
+        return self
+
+
 class OCRExtraction(BaseModel):
     """Raw evidence returned by a provider before normalization."""
 
@@ -32,6 +81,8 @@ class OCRExtraction(BaseModel):
     confidence: Confidence | None = None
     warnings: tuple[OCRWarningCode, ...] = ()
     processing_duration_ms: DurationMilliseconds
+    evidence: OCRStructuredEvidence | None = None
+    preprocessing: PreprocessingResult | None = None
 
 
 class OCRPageResult(OCRExtraction):
