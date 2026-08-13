@@ -28,10 +28,11 @@ all AI, OCR, database, vector-store, and UI integrations.
 
 ## Code boundaries
 
-The implemented package is currently limited to `app.core`. Future modules
-should be created only when their phase requires them. Keep configuration,
-logging, and shared exceptions small; introduce domain-specific exceptions with
-the domain feature that needs them.
+The implemented package currently includes `app.core`, focused paper domain
+models, and the PDF ingestion boundary. Future modules should be created only
+when their phase requires them. Keep configuration, logging, and shared
+exceptions small; introduce domain-specific exceptions with the domain feature
+that needs them.
 
 ## Configuration and logging
 

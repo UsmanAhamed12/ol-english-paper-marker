@@ -6,7 +6,7 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 1 - Project foundation and tooling.**
+**Phase 2 - PDF ingestion.**
 
 The repository currently provides:
 
@@ -15,7 +15,9 @@ The repository currently provides:
 - lightweight structured logging using the Python standard library;
 - a small application exception hierarchy;
 - pytest, Ruff, mypy, and coverage configuration;
-- a read-only Phase 0 dataset inventory tool and documented findings.
+- a read-only Phase 0 dataset inventory tool and documented findings;
+- parser-backed PDF validation and safe internal paper identifiers;
+- immutable paper/page metadata and deterministic PNG page rendering.
 
 OCR, question segmentation, marking-scheme ingestion, retrieval, grading,
 LangChain, LangGraph, PostgreSQL, Chroma, Ollama integration, and Streamlit are
@@ -53,6 +55,7 @@ practical.
 
 - Python 3.12 and uv
 - Pydantic v2 and pydantic-settings
+- PyMuPDF for PDF validation and page rendering
 - pytest, Ruff, and mypy
 - planned: LangChain, LangGraph, Ollama/Llama 2, ChromaDB, PostgreSQL, and
   Streamlit in their designated phases
@@ -93,4 +96,5 @@ uv run mypy app
 ```
 
 Further setup and workflow guidance is in [docs/setup.md](docs/setup.md) and
-[docs/development.md](docs/development.md).
+[docs/development.md](docs/development.md). The implemented ingestion boundary
+is documented in [docs/ingestion.md](docs/ingestion.md).

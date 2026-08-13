@@ -7,7 +7,8 @@
 - Poppler commands (`pdfinfo`, `pdftotext`, and `pdfimages`) are needed only to
   reproduce the Phase 0 structural dataset inventory.
 
-No Ollama, database, vector store, OCR, or UI service is required in Phase 1.
+PyMuPDF is installed by `uv sync` for Phase 2 PDF validation and rendering. No
+Ollama, database, vector store, OCR, or UI service is required in Phase 2.
 
 ## Python 3.12 environment
 
@@ -36,9 +37,13 @@ default because credentials must be supplied explicitly when database support
 is introduced. Other integration variables are placeholders for later phases;
 their services do not exist yet.
 
+PDF ingestion additionally supports `MAX_PDF_SIZE_MB`, `MAX_PDF_PAGES`,
+`PDF_RENDER_DPI`, and `RUNTIME_DATA_DIR`. See `docs/ingestion.md` for defaults
+and constraints.
+
 ## Verification
 
-Run the complete Phase 1 checks:
+Run the complete project checks:
 
 ```bash
 uv run pytest

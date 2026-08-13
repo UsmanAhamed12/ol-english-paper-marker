@@ -31,6 +31,9 @@ class LogLevel(StrEnum):
 
 UnitInterval = Annotated[float, Field(ge=0.0, le=1.0)]
 PositiveTopK = Annotated[int, Field(ge=1, le=100)]
+PositiveMegabytes = Annotated[int, Field(ge=1, le=1024)]
+PositivePageLimit = Annotated[int, Field(ge=1, le=1000)]
+RenderDPI = Annotated[int, Field(ge=72, le=600)]
 
 
 class Settings(BaseSettings):
@@ -46,6 +49,7 @@ class Settings(BaseSettings):
     app_env: AppEnvironment = AppEnvironment.DEVELOPMENT
     log_level: LogLevel = LogLevel.INFO
     data_dir: Path = Path("data")
+    runtime_data_dir: Path = Path("data/runtime")
 
     database_url: AnyUrl | None = None
 
@@ -58,6 +62,10 @@ class Settings(BaseSettings):
     ocr_confidence_threshold: UnitInterval = 0.80
     grading_confidence_threshold: UnitInterval = 0.70
     retrieval_top_k: PositiveTopK = 5
+
+    max_pdf_size_mb: PositiveMegabytes = 50
+    max_pdf_pages: PositivePageLimit = 100
+    pdf_render_dpi: RenderDPI = 150
 
 
 @lru_cache(maxsize=1)

@@ -7,3 +7,19 @@ class ApplicationError(Exception):
 
 class ConfigurationError(ApplicationError):
     """Raised when runtime configuration cannot support an operation."""
+
+
+class InvalidPDFError(ApplicationError):
+    """Raised when an input is not a readable, supported PDF."""
+
+
+class PDFTooLargeError(InvalidPDFError):
+    """Raised when a PDF exceeds the configured byte limit."""
+
+
+class PDFPageLimitError(InvalidPDFError):
+    """Raised when a PDF exceeds the configured page-count limit."""
+
+
+class PDFRenderingError(ApplicationError):
+    """Raised when validated PDF pages cannot be rendered safely."""
