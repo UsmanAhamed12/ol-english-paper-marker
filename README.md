@@ -6,7 +6,7 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 4C.2 - OCR image preprocessing experiment.**
+**Phase 4C.3 - exam structure and Test segmentation.**
 
 The repository currently provides:
 
@@ -26,11 +26,22 @@ The repository currently provides:
   and deterministic layout reconstruction.
 - typed, geometry-preserving OpenCV preprocessing experiments with immutable
   canonical images and private derived artifacts.
+- deterministic multi-signal Test-marker detection, ordered cross-page Test
+  regions, explicit missing-marker evidence, private structure metrics, and
+  immutable visual-debug overlays.
+- immutable evidence and answer-region models, multi-signal raster/layout
+  feature extraction, conservative four-class candidate attribution, and
+  private labeling overlays.
 
 Plain Tesseract has been measured as a fast layout/printed-text baseline; it is
 not selected as a handwriting solution. Four fixed preprocessing variants were
 measured and none beat the official baseline, so preprocessing remains disabled.
-Question segmentation, marking-scheme ingestion, retrieval, grading, LangChain,
+The structure layer detected 44/48 manually verified headings with zero false
+positives on three private papers. Phase 4C.4 has prepared an 18-sample private
+benchmark for human verification of evidence and answer-region candidates;
+classifier accuracy has not yet been measured and no output is treated as
+authorship ground truth. Marking-scheme ingestion,
+retrieval, grading, LangChain,
 LangGraph, PostgreSQL, Chroma, and Streamlit are planned for later phases.
 
 ## Problem statement
@@ -113,3 +124,8 @@ documented in [docs/ocr-benchmark.md](docs/ocr-benchmark.md), and the classical
 baseline is documented in [docs/tesseract-ocr.md](docs/tesseract-ocr.md).
 The measured preprocessing experiment is documented in
 [docs/ocr-preprocessing.md](docs/ocr-preprocessing.md).
+The deterministic Test-region layer and its private benchmark are documented in
+[docs/exam-structure.md](docs/exam-structure.md).
+The evidence-separation contracts, private labeling checkpoint, and current
+limitations are documented in
+[docs/evidence-separation.md](docs/evidence-separation.md).

@@ -153,6 +153,25 @@ images are hash-checked and never overwritten. Four fixed variants all
 regressed on aggregate CER/WER, so `none` remains selected. See
 [ocr-preprocessing.md](ocr-preprocessing.md).
 
+## Phase 4C.3 exam structure
+
+Typed Tesseract word evidence now feeds a deterministic `ExamStructureDetector`
+that combines conservative text rules, word geometry, OCR confidence, and
+document sequence. It retains marker provenance, supports multiple Tests per
+page and cross-page regions, and reports missing headings without inventing
+them. A separate private structure benchmark measured 1.0000 precision and
+0.9167 recall across 48 headings. See
+[exam-structure.md](exam-structure.md).
+
+## Phase 4C.4 evidence separation checkpoint
+
+Typed Test regions now feed a deterministic feature and evidence boundary that
+preserves printed, student-candidate, teacher-candidate, and unknown evidence,
+plus conservative answer-space candidates. No single confidence or color signal
+determines attribution. An 18-sample private benchmark and labeling worksheet
+are prepared, but accuracy metrics remain blocked until human verification. See
+[evidence-separation.md](evidence-separation.md).
+
 ## Not implemented
 
 - no selected handwriting OCR solution;
@@ -160,4 +179,5 @@ regressed on aggregate CER/WER, so `none` remains selected. See
 - no adopted preprocessing variant (experimental derived-image support exists);
 - no handwriting recognition claim;
 - no teacher-mark removal;
-- no retries, concurrency, persistence, segmentation, or grading.
+- no verified authorship classification or answer-text extraction, retries,
+  concurrency, persistence, or grading.

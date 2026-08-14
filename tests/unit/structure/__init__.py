@@ -1,0 +1,1 @@
+"""Structure detection unit tests."""

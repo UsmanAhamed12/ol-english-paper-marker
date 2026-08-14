@@ -37,5 +37,13 @@ class ImagePreprocessingError(OCRProcessingError):
     """Raised when a derived OCR image cannot be produced safely."""
 
 
+class StructureDetectionError(ApplicationError):
+    """Raised when exam structure cannot be derived or rendered safely."""
+
+
+class EvidenceSeparationError(ApplicationError):
+    """Raised when page evidence cannot be classified or rendered safely."""
+
+
 class OCRBenchmarkPreparationError(ApplicationError):
     """Raised when private OCR benchmark samples cannot be prepared safely."""
