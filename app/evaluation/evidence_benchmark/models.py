@@ -48,7 +48,7 @@ class EvidenceBenchmarkSample(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    sample_id: Annotated[str, Field(pattern=r"^sample_[0-9]{3}$")]
+    sample_id: Annotated[str, Field(pattern=r"^(?:sample|evidence_v2)_[0-9]{3}$")]
     paper_alias: SafeIdentifier
     page_number: Annotated[int, Field(gt=0)]
     test_number: Annotated[int, Field(ge=1, le=99)]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
@@ -58,10 +59,16 @@ def prepare_private_artifacts(
     manifest_path: Path,
     *,
     settings: Settings | None = None,
+    artifact_namespace: str | None = None,
 ) -> dict[str, Any]:
     """Run local deterministic evidence analysis without evaluating ground truth."""
 
     resolved_manifest = manifest_path.resolve(strict=True)
+    if (
+        artifact_namespace is not None
+        and re.fullmatch(r"[a-z0-9][a-z0-9_-]{2,31}", artifact_namespace) is None
+    ):
+        raise ValueError("Private artifact namespace is invalid")
     manifest = load_evidence_manifest(resolved_manifest)
     root = resolved_manifest.parent
     sample_paths, worksheet = prepare_evidence_benchmark(manifest, root)
@@ -94,7 +101,10 @@ def prepare_private_artifacts(
             test_number=sample.test_number,
             region_bbox=sample.region,
         )
-        overlay_path = root / "overlays" / f"{sample.sample_id}.png"
+        overlay_root = root / "overlays"
+        if artifact_namespace is not None:
+            overlay_root = overlay_root / artifact_namespace
+        overlay_path = overlay_root / f"{sample.sample_id}.png"
         render_evidence_overlay(
             page,
             analyzed,
@@ -114,7 +124,10 @@ def prepare_private_artifacts(
                 "evidence": analyzed.model_dump(mode="json"),
             }
         )
-    result_path = root / "results" / "candidate_predictions.json"
+    result_root = root / "results"
+    if artifact_namespace is not None:
+        result_root = result_root / artifact_namespace
+    result_path = result_root / "candidate_predictions.json"
     result_path.parent.mkdir(parents=True, exist_ok=True)
     _write_json(
         result_path,

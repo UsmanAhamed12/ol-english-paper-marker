@@ -79,6 +79,82 @@ The preparation command creates ignored crops, overlays, candidate predictions,
 and a private worksheet. It never supplies classifier predictions as human
 labels and does not overwrite an existing worksheet.
 
+Launch the loopback-only visual labeling tool with:
+
+```bash
+uv run python -m scripts.annotate_evidence
+```
+
+Open `http://127.0.0.1:8765/` and press `Ctrl+C` to stop the server. Labels are
+saved only to ignored `data/evaluation/evidence/annotations.json`. The tool does
+not infer labels, convert transcription strings into boxes, or run benchmark
+metrics.
+
+For the Phase 4C.4R human re-verification session, use:
+
+```bash
+uv run python -m scripts.annotate_evidence --reverify
+```
+
+Re-verification starts at zero even when older annotations carry the original
+`human_verified` flag. The interface displays the current saved class and
+rectangles as review evidence but does not preselect a class. Each sample
+requires the dedicated re-verified/save action. Any semantic change first
+creates a timestamp-and-fingerprint backup of the previous valid
+`annotations.json` beneath ignored `data/evaluation/evidence/backups/` storage.
+Do not run the evaluator until the current session reports 18/18.
+
+After 18/18 persisted approvals validate, the one-time finalizer creates a
+complete non-overwriting private snapshot, independently reloads it, and writes
+the unchanged detector measurement beneath a separate `phase4c4r` result
+namespace:
+
+```bash
+uv run python -m scripts.finalize_evidence_reverification
+```
+
+The completed Phase 4C.4R baseline has already been finalized. The command
+refuses to overwrite its snapshot or result and is documented for auditability,
+not routine reruns.
+
+The separate Phase 4C.5A evidence-v2 candidate pool is already prepared. Safely
+validate it without evaluating the separator:
+
+```bash
+uv run python -m scripts.prepare_evidence_expansion validate
+```
+
+Launch its loopback-only labeler with:
+
+```bash
+uv run python -m scripts.annotate_evidence --dataset evidence-v2
+```
+
+All v2 records began pending, no discovery category was preselected, and no
+candidate rectangle became human ground truth automatically. The completed
+48-sample dataset is now frozen and measured. Its one-time finalizer validates
+historical assets, writes a non-overwriting complete private snapshot,
+independently recovers it, and measures unchanged detector behavior:
+
+```bash
+uv run python -m scripts.finalize_evidence_expansion
+```
+
+The completed command refuses to overwrite its snapshot or result and is kept
+for auditability. Do not tune the separator against these labels in Phase
+4C.5B. Follow the finalized policy and results in
+`docs/evidence-benchmark-v2.md`.
+
+After all annotations validate, reproduce the frozen untuned baseline with:
+
+```bash
+uv run python -m scripts.evaluate_evidence
+```
+
+This writes only ignored provenance, predictions, metrics, and comparison
+overlays. The current measured decision is insufficient human class coverage;
+do not treat evidence classifications as production-ready answer extraction.
+
 ## Configuration and logging
 
 Settings live in `app/core/config.py` and are loaded from environment variables
@@ -112,3 +188,13 @@ external services.
 ignored by Git. Generated outputs must use ignored processed, evaluation,
 runtime, or Chroma directories. Never overwrite source documents or expose
 student-identifying filenames in logs and fixtures.
+Teacher-focused Phase 4C.5C candidates use a separate pending namespace:
+
+```bash
+uv run python -m scripts.prepare_teacher_evidence validate
+uv run python -m scripts.annotate_evidence --dataset evidence-teacher-v1
+```
+
+The latter binds only to `127.0.0.1`. Candidate discovery categories are not
+ground truth; do not evaluate or tune the separator until all samples have been
+visually labeled and a later phase explicitly authorizes freezing.

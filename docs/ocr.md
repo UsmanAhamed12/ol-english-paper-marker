@@ -163,14 +163,15 @@ them. A separate private structure benchmark measured 1.0000 precision and
 0.9167 recall across 48 headings. See
 [exam-structure.md](exam-structure.md).
 
-## Phase 4C.4 evidence separation checkpoint
+## Phase 4C.4 evidence separation baseline
 
 Typed Test regions now feed a deterministic feature and evidence boundary that
 preserves printed, student-candidate, teacher-candidate, and unknown evidence,
 plus conservative answer-space candidates. No single confidence or color signal
-determines attribution. An 18-sample private benchmark and labeling worksheet
-are prepared, but accuracy metrics remain blocked until human verification. See
-[evidence-separation.md](evidence-separation.md).
+determines attribution. The 18-sample private baseline is measured, but it has
+zero human PRINTED/TEACHER support, only 0.1176 student recall, and 0.0402 answer-
+region F1 at IoU 0.50. The separator is not accepted for downstream extraction.
+See [evidence-separation.md](evidence-separation.md).
 
 ## Not implemented
 
