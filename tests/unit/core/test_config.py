@@ -21,6 +21,12 @@ def test_settings_load_safe_local_defaults(
     assert settings.log_level is LogLevel.INFO
     assert settings.data_dir == Path("data")
     assert settings.runtime_data_dir == Path("data/runtime")
+    assert settings.syllabus_pdf_path == Path(
+        "data/syllabus/grade-10-english-syllabus-68d2609d3a1ea.pdf"
+    )
+    assert settings.ollama_embedding_model == "nomic-embed-text"
+    assert settings.chroma_persist_dir == Path("data/chroma")
+    assert settings.chroma_collection_name == "ol_english_knowledge"
     assert settings.database_url is None
     assert str(settings.ollama_base_url) == "http://localhost:11434/"
     assert settings.ocr_confidence_threshold == 0.80
@@ -32,6 +38,7 @@ def test_settings_load_safe_local_defaults(
     assert settings.tesseract_language == "eng"
     assert settings.tesseract_psm == 6
     assert settings.tesseract_timeout_seconds == 120.0
+    assert settings.ui_demo_enabled is False
 
 
 def test_environment_variables_override_defaults(
@@ -45,6 +52,7 @@ def test_environment_variables_override_defaults(
     monkeypatch.setenv("RETRIEVAL_TOP_K", "8")
     monkeypatch.setenv("MAX_PDF_PAGES", "25")
     monkeypatch.setenv("PDF_RENDER_DPI", "200")
+    monkeypatch.setenv("UI_DEMO_ENABLED", "true")
 
     settings = Settings()
 
@@ -54,6 +62,7 @@ def test_environment_variables_override_defaults(
     assert settings.retrieval_top_k == 8
     assert settings.max_pdf_pages == 25
     assert settings.pdf_render_dpi == 200
+    assert settings.ui_demo_enabled is True
 
 
 @pytest.mark.parametrize(

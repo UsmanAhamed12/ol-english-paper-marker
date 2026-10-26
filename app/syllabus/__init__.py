@@ -1,0 +1,1 @@
+"""Curriculum-reference document ingestion."""

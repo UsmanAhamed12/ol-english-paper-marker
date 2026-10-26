@@ -26,10 +26,28 @@ and 9 unknown. The single teacher sample is insufficient for safety validation,
 so the decision is teacher-focused benchmark expansion before redesign.
 See `docs/evidence-benchmark-v2.md` for the complete metrics and policy.
 
-Phase 4C.5C now prepares a separate 48-crop teacher-risk pool across 12 safe
-paper aliases. It remains entirely pending: discovery categories are not human
-labels, no separator metrics have been run, and no detector rule changed. See
-`docs/teacher-evidence-benchmark.md`.
+Phase 4C.5D froze and measured the separate 48-crop teacher-risk pool across 12
+safe aliases. Fingerprint `405f8c0d...b7d9` covers 11 printed, 4 student, 13
+teacher, and 20 unknown labels. The unchanged rules achieved teacher F1 0.2609;
+3/13 teacher samples were classified student and 5/13 produced student-answer
+regions. Coverage is now sufficient to begin Phase 4C.6 redesign, but the
+current separator remains unsafe. See `docs/teacher-evidence-benchmark.md`.
+
+Phase 4C.6 kept V1 unchanged and evaluated four explicit V2 configurations on
+all three frozen datasets. The best diagnostic V2 candidate improved student
+recall but caused 10/13 teacher-to-student errors and emitted student regions on
+12/13 teacher samples. Every candidate failed the hard V1 teacher-safety
+ceiling, so no V2 configuration was selected. See
+`docs/evidence-separator-v2.md`; neither V1 nor V2 is approved for downstream
+answer extraction.
+
+Phase 4C.6R is the final evidence optimization for the FYP. V1 now feeds a
+minimal `StudentCandidateSafetyFilter` that rejects obvious guides/borders/noise,
+quarantines teacher-risk evidence, and creates student regions only from safe
+candidates. Teacher-to-student contamination falls from 3/13 to 2/13 and total
+regions from 539 to 264 across the frozen benchmarks. The policy is accepted
+with explicit `SAFE`, `REVIEW_REQUIRED`, and `EMPTY` outcomes. See
+`docs/evidence-safety-filter.md`.
 
 ## Purpose and architecture
 

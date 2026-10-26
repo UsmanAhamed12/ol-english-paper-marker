@@ -13,6 +13,11 @@ Raw papers are stored in `data/raw/marked_papers/`. They are immutable source
 data and may contain student identifiers, handwriting, and teacher markings.
 Some filenames also contain student names. Treat the directory as sensitive:
 
+Curriculum reference material is stored separately under `data/syllabus/` and is
+not treated as raw student data. The project currently includes the Grade 10
+English syllabus PDF at `data/syllabus/grade-10-english-syllabus-68d2609d3a1ea.pdf`
+as the local reference source for rubric and curriculum-aware marking logic.
+
 - do not edit or overwrite source PDFs;
 - do not commit additional student data without explicit approval;
 - do not expose names or admission numbers in logs, reports, fixtures, or UI;

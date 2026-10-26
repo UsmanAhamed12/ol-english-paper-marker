@@ -6,7 +6,7 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 4C.5C - teacher-focused evidence candidates prepared; human labeling required.**
+**Phase 7 - local Streamlit FYP demonstration application implemented.**
 
 The repository currently provides:
 
@@ -32,6 +32,31 @@ The repository currently provides:
 - immutable evidence and answer-region models, multi-signal raster/layout
   feature extraction, conservative four-class candidate attribution, and
   private labeling overlays.
+- an explicit parallel Evidence Separator V2 experiment with grouped evidence,
+  typed explainable scores, separate answer-space semantics, configuration
+  hashes, immutable private experiment records, and visual QA overlays.
+- immutable Test-owned student-answer and paper contracts, deterministic
+  reading order, region-level OCR provenance, explicit empty/review/failure
+  states, and private deterministic JSON serialization.
+- a separate typed marking-scheme boundary with conservative Test/criterion
+  parsing, explicit UNKNOWN/warning states, source provenance, and exact-number
+  alignment to structured student answers.
+- a deterministic Decimal-safe marking engine for exact answers, accepted
+  variants, token/phrase keywords, and explicitly allocated multi-part
+  criteria, with confirmed and unresolved marks kept separate.
+- a replaceable local subjective-marking provider, rubric-first versioned
+  prompt, strict response/ownership/mark-cap validation, and combined objective
+  plus subjective paper results with mandatory review fallbacks.
+- one injectable `PaperMarkingService` that coordinates both PDFs through
+  extraction, scheme ingestion, exact alignment, objective and subjective
+  marking, aggregation, review-queue creation, and a safe final result.
+- a thin local Streamlit application with private PDF materialization, safe
+  confirmed/final score semantics, Test and criterion breakdowns, feedback,
+  review queue, deterministic JSON download, and an explicitly synthetic demo
+  mode for presentation QA.
+- provenance-tagged syllabus extraction and chunking, Ollama embeddings,
+  persistent Chroma storage, and metadata-filtered retrieval; see
+  [docs/rag.md](docs/rag.md).
 
 Plain Tesseract has been measured as a fast layout/printed-text baseline; it is
 not selected as a handwriting solution. Four fixed preprocessing variants were
@@ -57,13 +82,62 @@ empty. Only one human teacher sample exists, so teacher-contamination safety is
 unvalidated and a teacher-focused benchmark expansion is required before
 separator redesign can be accepted. These differences from Phase 4C.4R reflect
 benchmark composition, not an algorithm change.
-Phase 4C.5C has prepared a separate 48-crop teacher-risk pool from 12 safe
-paper aliases. Its discovery categories are sampling hints only: all samples
-remain pending visual review, and no separator rule or benchmark metric has
-changed. See `docs/teacher-evidence-benchmark.md`.
-Marking-scheme ingestion,
-retrieval, grading, LangChain,
-LangGraph, PostgreSQL, Chroma, and Streamlit are planned for later phases.
+Phase 4C.5D froze the 48-crop teacher-focused benchmark with fingerprint
+`405f8c0d...b7d9`. Human support is 11 printed, 4 student, 13 teacher, and 20
+unknown. The unchanged separator classified 3/13 teacher samples as student
+and produced student-answer regions on 5/13 teacher samples, so it is not safe
+for downstream extraction. The combined frozen benchmarks now provide enough
+coverage for a measured Phase 4C.6 separator redesign; this is a data-readiness
+decision, not acceptance of the current model. See
+`docs/teacher-evidence-benchmark.md`.
+Phase 4C.6 evaluated four predetermined V2 configurations across all three
+frozen evidence benchmarks. None passed the hard teacher-safety gate: the best
+diagnostic candidate classified 10/13 teacher samples as student, compared with
+3/13 under V1, and emitted student regions on 12/13 teacher samples. V2 is not
+selected; its failure motivated the deliberately smaller post-V1 safety
+boundary used for the prototype. See
+`docs/evidence-separator-v2.md`.
+Phase 4C.6R keeps V1 and adds a thin deterministic safety filter. On teacher-v1,
+teacher-to-student contamination fell from 3/13 to 2/13, teacher samples with
+student regions fell from 5/13 to 4/13, and correct empty behavior improved from
+16/20 to 18/20. Across all benchmarks, predicted regions fell from 539 to 264.
+The filter is accepted for the FYP prototype with explicit review flags; it is
+not production-grade authorship classification. See
+`docs/evidence-safety-filter.md`.
+Phase 4D now converts the accepted safe evidence into one ordered answer object
+per detected Test. Only safe regions enter OCR; quarantined regions remain
+separate, missing Tests are never invented, and failures are isolated. Because
+the historical corpus contains teacher marks, its private smoke outputs are
+forced to `REVIEW_REQUIRED` even when OCR succeeds. See
+`docs/student-answer-extraction.md`.
+Syllabus indexing and a Chroma retrieval boundary are implemented, but
+retrieval is not yet connected to grading prompts. LangGraph and PostgreSQL
+remain planned for later phases. The orchestration, subjective, and Streamlit
+paths are implemented for an FYP prototype; real marking accuracy has not yet
+been evaluated and no official marking-scheme PDF is currently available for a
+real end-to-end smoke.
+
+## FYP demo quick start
+
+1. Install locked dependencies with `uv sync`.
+2. Start local Ollama and verify the model configured by
+   `OLLAMA_GRADING_MODEL` is installed.
+3. Verify Tesseract is installed with `tesseract --version`.
+4. Launch the UI:
+
+   ```bash
+   uv run streamlit run streamlit_app.py
+   ```
+
+5. Upload one student answer PDF and its corresponding official marking scheme.
+6. Select **Mark Paper** and wait for local processing.
+7. Inspect confirmed/final score semantics, Test breakdown, feedback, warnings,
+   and every review-required item.
+
+With no official scheme available, presentation-only synthetic states can be
+enabled explicitly with `UI_DEMO_ENABLED=true`. They are visibly labeled and
+must not be presented as real examination marking. See
+[docs/streamlit-application.md](docs/streamlit-application.md).
 
 ## Problem statement
 
@@ -100,7 +174,7 @@ practical.
 - PyMuPDF for PDF validation and page rendering
 - pytest, Ruff, and mypy
 - planned: LangChain, LangGraph, Ollama/Llama 2, ChromaDB, PostgreSQL, and
-  Streamlit in their designated phases
+  persistence integrations in their designated phases
 
 ## Local-first and privacy
 
@@ -150,8 +224,17 @@ The deterministic Test-region layer and its private benchmark are documented in
 The evidence-separation contracts, private labeling checkpoint, and current
 limitations are documented in
 [docs/evidence-separation.md](docs/evidence-separation.md).
-Phase 4C.5C adds a separate 48-crop, 12-paper teacher-risk candidate pool to
-address the remaining teacher-class coverage gap. Candidate categories are
-sampling hints only; all samples are pending visual review, and the separator
-has not been tuned or evaluated on this dataset. See
+The controlled Phase 4C.6 V2 architecture, results, and rejection gate are
+documented in
+[docs/evidence-separator-v2.md](docs/evidence-separator-v2.md).
+The final prototype safety policy and its frozen evaluation are documented in
+[docs/evidence-safety-filter.md](docs/evidence-safety-filter.md).
+The Test-owned answer extraction contract is documented in
+[docs/student-answer-extraction.md](docs/student-answer-extraction.md).
+The structured marking-scheme and alignment boundary is documented in
+[docs/marking-scheme-ingestion.md](docs/marking-scheme-ingestion.md).
+The supported deterministic rules, score semantics, and fallbacks are in
+[docs/deterministic-marking-engine.md](docs/deterministic-marking-engine.md).
+The frozen 48-crop, 12-paper teacher benchmark and unchanged V1 measurements
+are documented in
 [`docs/teacher-evidence-benchmark.md`](docs/teacher-evidence-benchmark.md).

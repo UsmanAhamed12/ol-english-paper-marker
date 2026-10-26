@@ -53,18 +53,24 @@ class Settings(BaseSettings):
     log_level: LogLevel = LogLevel.INFO
     data_dir: Path = Path("data")
     runtime_data_dir: Path = Path("data/runtime")
+    syllabus_pdf_path: Path = Path(
+        "data/syllabus/grade-10-english-syllabus-68d2609d3a1ea.pdf"
+    )
 
     database_url: AnyUrl | None = None
 
     ollama_base_url: AnyHttpUrl = AnyHttpUrl("http://localhost:11434")
     ollama_grading_model: str = "llama2"
     ollama_ocr_model: str | None = None
+    ollama_embedding_model: str = "nomic-embed-text"
     ollama_ocr_timeout_seconds: OllamaTimeoutSeconds = 900.0
+    ollama_grading_timeout_seconds: OllamaTimeoutSeconds = 300.0
     tesseract_language: str = "eng"
     tesseract_psm: TesseractPSM = 6
     tesseract_timeout_seconds: TesseractTimeoutSeconds = 120.0
 
     chroma_persist_dir: Path = Path("data/chroma")
+    chroma_collection_name: str = "ol_english_knowledge"
 
     ocr_confidence_threshold: UnitInterval = 0.80
     grading_confidence_threshold: UnitInterval = 0.70
@@ -73,6 +79,7 @@ class Settings(BaseSettings):
     max_pdf_size_mb: PositiveMegabytes = 50
     max_pdf_pages: PositivePageLimit = 100
     pdf_render_dpi: RenderDPI = 150
+    ui_demo_enabled: bool = False
 
 
 @lru_cache(maxsize=1)

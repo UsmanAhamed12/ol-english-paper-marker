@@ -78,6 +78,20 @@ class OllamaClient(Protocol):
         """Run one local, non-streaming vision request."""
 
 
+class OllamaTextClient(Protocol):
+    """Small local text-generation boundary shared with guarded grading."""
+
+    def chat_text(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        options: Mapping[str, GenerationValue],
+        response_format: Mapping[str, object] | str,
+    ) -> OllamaChatResponse:
+        """Run one local, non-streaming structured text request."""
+
+
 class OllamaHTTPClient:
     """Minimal Ollama REST client restricted to a loopback endpoint."""
 
@@ -171,6 +185,35 @@ class OllamaHTTPClient:
             "/api/generate",
             {"model": model, "keep_alive": 0, "stream": False},
         )
+
+    def chat_text(
+        self,
+        *,
+        model: str,
+        prompt: str,
+        options: Mapping[str, GenerationValue],
+        response_format: Mapping[str, object] | str,
+    ) -> OllamaChatResponse:
+        """Send one structured text request to the loopback Ollama service."""
+
+        payload = self._request(
+            "POST",
+            "/api/chat",
+            {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+                "think": False,
+                "keep_alive": "5m",
+                "format": (
+                    dict(response_format)
+                    if isinstance(response_format, Mapping)
+                    else response_format
+                ),
+                "options": dict(options),
+            },
+        )
+        return _parse_chat_response(payload, context="grading")
 
     def set_timeout(self, timeout_seconds: float) -> None:
         """Adjust the request deadline for a bounded benchmark invocation."""
@@ -332,3 +375,34 @@ def _validate_local_base_url(base_url: str) -> str:
 def _is_cloud_model(model: str) -> bool:
     normalized = model.casefold()
     return normalized.endswith("-cloud") or normalized.endswith(":cloud")
+
+
+def _parse_chat_response(
+    payload: Mapping[str, object], *, context: str
+) -> OllamaChatResponse:
+    message = payload.get("message")
+    resolved_model = payload.get("model")
+    done = payload.get("done")
+    if (
+        not isinstance(message, dict)
+        or not isinstance(resolved_model, str)
+        or done is not True
+    ):
+        raise OllamaResponseError(
+            f"Local Ollama returned an invalid {context} response"
+        )
+    content = message.get("content")
+    if not isinstance(content, str):
+        raise OllamaResponseError(
+            f"Local Ollama returned an invalid {context} response"
+        )
+    total_duration = payload.get("total_duration")
+    if total_duration is not None and not isinstance(total_duration, int):
+        raise OllamaResponseError(
+            f"Local Ollama returned an invalid {context} response"
+        )
+    return OllamaChatResponse(
+        content=content,
+        resolved_model=resolved_model,
+        total_duration_ns=total_duration,
+    )

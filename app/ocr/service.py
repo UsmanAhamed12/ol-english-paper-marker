@@ -18,6 +18,18 @@ class OCRService:
         self._provider = provider
         self._normalizer = normalizer
 
+    @property
+    def provider_name(self) -> str:
+        """Expose stable provider identity without leaking its implementation."""
+
+        return self._provider.name
+
+    @property
+    def model_version(self) -> str | None:
+        """Expose optional provider model/version provenance."""
+
+        return self._provider.model_version
+
     def process_page(self, page: PaperPage) -> OCRPageResult:
         """Extract and normalize one rendered page or fail explicitly."""
 

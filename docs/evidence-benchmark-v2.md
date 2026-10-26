@@ -233,3 +233,14 @@ and no thresholds were tuned in Phase 4C.5B.
   in this phase.
 - Metrics describe 48 private regions and should not be generalized to teacher
   contamination safety or the full 40-paper corpus.
+
+## Phase 4C.6 V2 measurement
+
+The unchanged frozen evidence-v2 labels were reused for four predetermined V2
+experiments. The best diagnostic configuration, V2-B, achieved accuracy 0.4375,
+macro F1 0.2939, student precision/recall/F1 0.2727/0.7500/0.4000, printed F1
+0.5652, and UNKNOWN rate 0.2083. Localization F1 was 0.0000 at IoU 0.50 and
+0.0861 at IoU 0.25; 2/9 verified-empty samples were correctly empty. These
+figures did not justify selection because the same configuration failed the
+teacher-v1 safety gate. Full cross-benchmark context is in
+`docs/evidence-separator-v2.md`.

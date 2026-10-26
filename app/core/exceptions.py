@@ -45,5 +45,41 @@ class EvidenceSeparationError(ApplicationError):
     """Raised when page evidence cannot be classified or rendered safely."""
 
 
+class AnswerExtractionError(ApplicationError):
+    """Raised when safe evidence cannot be converted into answer provenance."""
+
+
+class MarkingSchemeIngestionError(ApplicationError):
+    """Raised when an official marking scheme cannot be ingested safely."""
+
+
+class MarkingSchemeParseError(MarkingSchemeIngestionError):
+    """Raised when marking-scheme OCR has no reliable Test structure."""
+
+
+class KnowledgeBaseIngestionError(ApplicationError):
+    """Raised when a reference document cannot be indexed safely."""
+
+
+class KnowledgeBaseRetrievalError(ApplicationError):
+    """Raised when local reference material cannot be retrieved safely."""
+
+
+class MarkingEngineError(ApplicationError):
+    """Raised when deterministic marking cannot preserve score safety."""
+
+
+class SubjectiveMarkingProviderError(MarkingEngineError):
+    """Raised when the local subjective-marking provider cannot respond safely."""
+
+
+class SubjectiveMarkingTimeoutError(SubjectiveMarkingProviderError):
+    """Raised when local subjective inference exceeds its configured deadline."""
+
+
+class OrchestrationError(ApplicationError):
+    """Raised when the top-level marking workflow cannot preserve safety."""
+
+
 class OCRBenchmarkPreparationError(ApplicationError):
     """Raised when private OCR benchmark samples cannot be prepared safely."""

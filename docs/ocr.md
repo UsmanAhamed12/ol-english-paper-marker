@@ -180,5 +180,7 @@ See [evidence-separation.md](evidence-separation.md).
 - no adopted preprocessing variant (experimental derived-image support exists);
 - no handwriting recognition claim;
 - no teacher-mark removal;
-- no verified authorship classification or answer-text extraction, retries,
-  concurrency, persistence, or grading.
+- no verified authorship classification, retries, concurrency, persistence, or
+  grading;
+- Test-owned answer extraction exists, but it is a conservative FYP contract
+  with review fallback, not a handwriting-recognition or authorship claim.

@@ -2,113 +2,159 @@
 
 ## Status
 
-Phase 4C.5C has prepared a separate private `evidence-teacher-v1` candidate
-set for human labeling. It contains 48 pending crops from 32 pages across 12
-safely aliased papers. No human ground truth exists yet, no separator metrics
-have been calculated, and the existing separator and answer detector are
-unchanged.
+Phase 4C.5D froze and evaluated the private `evidence-teacher-v1` dataset.
+Its authoritative semantic annotation fingerprint is
+`405f8c0de7e73cbce13859457d2be28c3d615dc3d0ee2dd734a348b29ebbb7d9`.
+All 48 annotations validated and the complete snapshot was independently
+reloaded with every rectangle intact. The existing separator and answer-region
+detector were measured without changes.
 
-The prior frozen baselines remain separate and immutable: Phase 4C.4R has
-fingerprint `41d2364cbc0ac56269c30ef41473ccb67e9c08d7109e748f119f274f0671ab35`
-and evidence-v2 has fingerprint
-`b28eb7ce4daa69bdaa89687cc905366e92d4ed351205c706a77bb16ffea2614b`.
+The dataset contains 11 `PRINTED`, 4 `STUDENT_CANDIDATE`, 13
+`TEACHER_CANDIDATE`, and 20 `UNKNOWN` samples. This closes the previous absence
+of meaningful teacher support and is sufficient to begin a measured separator
+redesign. It does not show that teacher isolation is safe: teacher recall is
+0.2308, 3/13 teacher samples were classified as student, and 5/13 generated at
+least one predicted student-answer region.
 
 ## Purpose and labeling policy
 
-Evidence-v2 contains only one human `TEACHER_CANDIDATE`, so it cannot validate
-teacher-contamination safety. This dataset deliberately oversamples visual
-regions that may contain teacher marks plus hard negatives. Candidate discovery
-is high recall and is not an authorship decision.
+Evidence-v2 contained only one human teacher sample. The teacher-focused set
+therefore oversampled visual teacher-risk candidates and hard negatives using
+local discovery signals. Candidate categories were never ground truth. A human
+visually assigned exactly one dominant class and either drew crop-relative
+student-answer rectangles or explicitly verified the answer region empty.
 
-For each crop, a human must choose exactly one dominant class: `PRINTED`,
-`STUDENT_CANDIDATE`, `TEACHER_CANDIDATE`, or `UNKNOWN`. Color, shape, position,
-OCR confidence, and the displayed candidate box are hints only. A red mark is
-not automatically a teacher mark, and a blue or black stroke is not
-automatically student writing. Mixed or unclear authorship should remain
-`UNKNOWN`.
+Color, shape, position, OCR confidence, and the candidate overlay remained
+hints only. Red did not imply teacher, and blue or black did not imply student.
+Mixed or unclear authorship remained `UNKNOWN`. Student boxes use the smallest
+practical contiguous region intended for downstream OCR; teacher-only,
+printed-only, and blank samples normally have no student box.
 
-Student-answer rectangles follow the existing v2 policy: draw the smallest
-practical contiguous student-answer region intended for downstream OCR. Do not
-include separable printed prompts or teacher marks. Teacher-only, printed-only,
-and genuinely blank crops should be explicitly verified empty. No text is
-transcribed.
+## Discovery and private storage
 
-## Discovery architecture
+The deterministic `teacher-risk-discovery-v1` scanner used canonical PyMuPDF
+renders, Tesseract evidence, OpenCV color and connected-component features,
+geometry, margin activity, and nearby OCR context. It selected 48 crops from 32
+pages across 12 safe aliases. It did not alter OCR, canonical images, the
+separator, or the answer detector.
 
-The local deterministic `teacher-risk-discovery-v1` scanner reuses existing
-canonical PyMuPDF renders and Tesseract structured evidence. OpenCV derives
-candidate signals from chromatic foreground, compact connected components,
-angled tick/cross-like geometry, score-like shapes, correction strokes, margin
-location, nearby OCR hierarchy, printed controls, and mixed context. Signals
-select crops only; none is persisted as a human label.
+All source mappings, images, annotations, predictions, overlays, snapshots,
+and detailed results remain under ignored `data/evaluation/evidence_teacher_v1/`
+storage. The frozen directory contains a non-overwriting complete annotation
+snapshot and provenance; the result namespace contains the 48 private
+predictions and visual overlays. No external service was used.
 
-Overlap and containment suppression remove redundant views of the same local
-evidence. Selection applies fixed discovery-stratum targets and caps each paper
-at four samples and each page at two. Crop context is bounded, preserves native
-geometry, and is neither resized nor written back to the canonical page.
+## Frozen baseline methodology
 
-The selected discovery distribution (not ground truth) is:
+The finalizer verified all historical fingerprints, validated exactly 48
+human annotations, computed the semantic fingerprint, atomically froze the
+complete store, reloaded and validated it independently, and then ran the
+unchanged `EvidenceSeparator` and `AnswerRegionDetector`. Metrics use the
+existing dominant-class, confusion-matrix, empty-region, and deterministic
+one-to-one IoU contracts. Undefined metrics remain undefined.
 
-| Discovery stratum | Candidates |
-| --- | ---: |
-| Chromatic-ink risk | 12 |
-| Margin/score risk | 10 |
-| Tick/cross/correction risk | 10 |
-| Mixed teacher-context risk | 9 |
-| Ambiguous-mark risk | 2 |
-| Hard-negative control | 5 |
-| **Total** | **48** |
+## Classification results
 
-Discovery produced 72,807 raw component proposals and retained 10,406 after
-overlap suppression. The final pool has no exact duplicate crop. Large proposal
-counts are expected from a deliberately high-recall component scan; only the
-fixed 48 derived crops are presented for annotation.
+| Class | Human | Predicted | Precision | Recall | F1 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| PRINTED | 11 | 4 | 1.0000 | 0.3636 | 0.5333 |
+| STUDENT_CANDIDATE | 4 | 8 | 0.3750 | 0.7500 | 0.5000 |
+| TEACHER_CANDIDATE | 13 | 10 | 0.3000 | 0.2308 | 0.2609 |
+| UNKNOWN | 20 | 26 | 0.5000 | 0.6500 | 0.5652 |
 
-## Private storage and human workflow
+- overall accuracy: 0.4792;
+- macro F1: 0.4649;
+- weighted F1: 0.4700;
+- predicted UNKNOWN rate: 0.5417;
+- human UNKNOWN rate: 0.4167.
 
-All artifacts remain beneath ignored local storage:
+Confusion matrix (rows are human, columns are predicted):
 
-```text
-data/evaluation/evidence_teacher_v1/
-  benchmark_manifest.json
-  candidate_discovery_provenance.json
-  labeling_metadata.json
-  samples/
-  overlays/
-  annotations.json  # created by human saves
-```
+| Human / predicted | PRINTED | STUDENT | TEACHER | UNKNOWN |
+| --- | ---: | ---: | ---: | ---: |
+| PRINTED | 4 | 2 | 0 | 5 |
+| STUDENT | 0 | 3 | 0 | 1 |
+| TEACHER | 0 | 3 | 3 | 7 |
+| UNKNOWN | 0 | 0 | 7 | 13 |
 
-The neutral overlay says `CANDIDATE REGION - HUMAN REVIEW`; it never says that
-a teacher mark was detected. The labeler binds only to `127.0.0.1`, uses no
-external service, and begins with all 48 samples pending and no preselected
-class or accepted answer rectangle.
+Teacher-to-student contamination is 3/13 (0.2308). Teacher evidence was also
+sent to `UNKNOWN` seven times and correctly labeled teacher three times. No
+student or printed sample was predicted teacher, while seven unknown samples
+were predicted teacher. Teacher precision/recall/F1 are 0.3000/0.2308/0.2609.
+These values establish a redesign baseline, not production safety.
 
-Launch it from the repository root:
+## Answer-region results
 
-```bash
-uv run python -m scripts.annotate_evidence --dataset evidence-teacher-v1
-```
+There are 106 human boxes across 28 samples, 20 verified-empty samples, and 34
+predicted boxes.
 
-Open `http://127.0.0.1:8765/`, inspect every crop and overlay, choose the class,
-draw student-answer rectangles or explicitly verify empty, then save. Candidate
-statistics must not be interpreted as label targets.
+| Metric | IoU >= 0.50 | IoU >= 0.25 |
+| --- | ---: | ---: |
+| Matches | 5 | 11 |
+| Precision | 0.1471 | 0.3235 |
+| Recall | 0.0472 | 0.1038 |
+| F1 | 0.0714 | 0.1571 |
+| Missed human boxes | 101 | 95 |
+| Extra predicted boxes | 29 | 23 |
 
-Validate the private preparation safely with:
+Across all positive one-to-one overlaps there are 16 matches, with mean IoU
+0.3810 and median IoU 0.4294. Of 20 verified-empty samples, 16 were correctly
+predicted empty and four produced false-positive regions. Empty precision,
+recall, and F1 are 0.5517, 0.8000, and 0.6531 respectively.
 
-```bash
-uv run python -m scripts.prepare_teacher_evidence validate
-```
+Teacher-only localization is unsafe: 8/13 teacher samples produced no student
+region, but 5/13 produced seven student-answer boxes in total (mean 0.5385 per
+teacher sample).
 
-## Privacy, integrity, and limitations
+## Stratified observations
 
-Private provenance contains source paths and geometry; it is Git-ignored and is
-never printed by the labeler. Public documentation records only safe aliases
-and aggregates. Canonical SHA-256 hashes are checked before and after discovery
-and materialization. Raw PDFs, canonical renders, existing annotations,
-snapshots, OCR ground truth, and prior benchmark results are not modified.
+Discovery strata are analysis context, not labels. Teacher-to-student errors
+occurred in chromatic-ink, margin/score, detected-Test, and hard-negative
+contexts. The rate was 2/6 for teacher samples with margin activity, 2/6 for
+score-like geometry, and 2/3 in the margin/score-risk stratum. No such error
+occurred among teacher samples in the correction-stroke, tick/cross-geometry,
+mixed-teacher-context, OCR-context, or short-answer-teacher-risk strata, but
+their supports are small. Five teacher samples with nearby high-confidence
+print produced five answer boxes, illustrating that classification and
+localization safety must be evaluated separately.
 
-The pool is drawn from 12 papers already available through the evidence-v2
-canonical rendering set rather than creating new canonical renders. Discovery
-signals can include student strokes, printed glyphs, scan artifacts, and
-ambiguous marks. Human labeling may therefore yield fewer teacher examples than
-the candidate strata suggest. Phase 4C.5C stops before freezing or evaluation.
+## Comparison and decision
+
+| Benchmark | Samples | P/S/T/U support | Accuracy | Macro F1 | Student F1 | Teacher F1 | IoU .50 F1 | IoU .25 F1 | Correct empty |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Phase 4C.4R | 18 | 3/14/0/1 | 0.1667 | 0.1225 | 0.2500 | undefined | 0.0402 | 0.1518 | 0/4 |
+| Evidence-v2 | 48 | 30/8/1/9 | 0.3125 | 0.2469 | 0.3750 | 0.0000 | 0.0376 | 0.0657 | 5/9 |
+| Teacher-v1 | 48 | 11/4/13/20 | 0.4792 | 0.4649 | 0.5000 | 0.2609 | 0.0714 | 0.1571 | 16/20 |
+
+The algorithm is identical across these measurements; differences reflect
+benchmark composition, not improvement or regression.
+
+Decision: **B. DATA COVERAGE SUFFICIENT FOR PHASE 4C.6 EVIDENCE SEPARATOR V2
+REDESIGN.** Teacher-v1 adds 13 human teacher samples across diverse local risk
+contexts and 12 papers, while the two prior frozen datasets retain stronger
+printed and student support. The combined evidence is adequate to define and
+measure a redesign. Teacher safety is emphatically not accepted: future work
+must target teacher-to-student contamination, unknown/teacher confusion,
+student precision, box recall, and empty-region false positives.
+
+## Limitations
+
+- Teacher-v1 deliberately changes the class distribution and cannot be used to
+  infer corpus prevalence.
+- Four human student samples are too few to assess student behavior from this
+  dataset alone; evidence-v2 and Phase 4C.4R remain necessary complements.
+- Discovery signals bias the pool toward chromatic and component-based risks.
+- Teacher authorship remains a human visual judgment in flattened scans.
+- Box recall remains low, and teacher samples still emit student regions.
+- No detector tuning, OCR change, ML model, grading, or downstream extraction
+  was performed in Phase 4C.5D.
+
+## Phase 4C.6 V2 safety result
+
+Four fixed V2 variants were evaluated without modifying this frozen benchmark.
+The best diagnostic candidate, V2-B, regressed teacher-to-student contamination
+from V1's 3/13 to 10/13, classified no teacher sample correctly, produced
+student regions on 12/13 teacher samples, and emitted 138 student boxes on those
+samples. Teacher-v1 accuracy/macro F1 fell from 0.4792/0.4649 under V1 to
+0.3542/0.3366. The candidate was rejected; these results do not alter or replace
+the Phase 4C.5D baseline. See `docs/evidence-separator-v2.md`.

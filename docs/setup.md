@@ -20,7 +20,10 @@ uv sync
 
 `opencv-python-headless` is installed by `uv sync` for the Phase 4C.2
 derived-image experiment. It does not require GUI frameworks. No database,
-vector store, alternate Poppler rendering, or UI service is required.
+alternate Poppler rendering, or UI service is required for the OCR baseline.
+The local RAG index additionally requires Ollama and its configured embedding
+model. See [rag.md](rag.md) to index the syllabus. PostgreSQL is not required
+for this local Chroma-only indexing step.
 
 ## Python 3.12 environment
 

@@ -31,6 +31,10 @@ from app.evaluation.evidence_expansion.models import (
     EvidenceExpansionManifest,
     EvidenceExpansionSample,
 )
+from app.evaluation.teacher_evidence.models import (
+    TeacherEvidenceManifest,
+    TeacherEvidenceSample,
+)
 from app.evidence.models import EvidenceType, TestEvidence
 from app.ocr.models import BoundingBox
 
@@ -66,14 +70,19 @@ class EvidenceBenchmarkEvaluation(BaseModel):
 
 
 def evaluate_evidence_benchmark(
-    manifest: EvidenceBenchmarkManifest | EvidenceExpansionManifest,
+    manifest: (
+        EvidenceBenchmarkManifest | EvidenceExpansionManifest | TeacherEvidenceManifest
+    ),
     annotations: EvidenceAnnotationStore,
     predictions: dict[str, TestEvidence],
 ) -> EvidenceBenchmarkEvaluation:
     """Evaluate exact aligned sample IDs without exposing page content."""
 
     benchmark_samples = cast(
-        tuple[EvidenceBenchmarkSample | EvidenceExpansionSample, ...],
+        tuple[
+            EvidenceBenchmarkSample | EvidenceExpansionSample | TeacherEvidenceSample,
+            ...,
+        ],
         manifest.samples,
     )
     human_by_id = {item.sample_id: item for item in annotations.annotations}
@@ -122,7 +131,7 @@ def evaluate_evidence_benchmark(
 
 
 def _sample_evaluation(
-    sample: EvidenceBenchmarkSample | EvidenceExpansionSample,
+    sample: EvidenceBenchmarkSample | EvidenceExpansionSample | TeacherEvidenceSample,
     annotation: EvidenceAnnotation,
     evidence: TestEvidence,
     predicted_boxes: tuple[BoundingBox, ...],
@@ -145,10 +154,10 @@ def _sample_evaluation(
 
 
 def _sample_categories(
-    sample: EvidenceBenchmarkSample | EvidenceExpansionSample,
+    sample: EvidenceBenchmarkSample | EvidenceExpansionSample | TeacherEvidenceSample,
 ) -> tuple[str, ...]:
     categories = tuple(category.value for category in sample.categories)
-    if isinstance(sample, EvidenceExpansionSample):
+    if isinstance(sample, (EvidenceExpansionSample, TeacherEvidenceSample)):
         test_context = (
             "detected_test" if sample.test_number is not None else "no_detected_test"
         )

@@ -2,8 +2,8 @@
 
 ## Status
 
-Proposed; Phase 4C.4R baseline is trustworthy but not accepted for downstream
-extraction because class coverage and localization remain insufficient
+Proposed; three recoverable human benchmarks now support Phase 4C.6 redesign,
+but the current separator is not accepted for downstream extraction
 
 ## Context
 
@@ -85,3 +85,11 @@ without changing the separator. High-recall local color, component, geometry,
 margin, OCR-context, and hard-negative signals select crops but never assign
 ground truth. Human visual inspection remains the only source of labels. This
 keeps discovery bias explicit and preserves both frozen benchmark histories.
+
+Phase 4C.5D froze that 48-sample pool under fingerprint `405f8c0d...b7d9`.
+Human support is 11 printed, 4 student, 13 teacher, and 20 unknown. The unchanged
+separator achieved teacher precision/recall/F1 of 0.3000/0.2308/0.2609,
+classified 3/13 teacher samples as student, and emitted student-answer regions
+on 5/13 teacher samples. The benchmark coverage is sufficient to authorize a
+separately measured Phase 4C.6 redesign, while these contamination results keep
+the present strategy proposed and explicitly unaccepted.

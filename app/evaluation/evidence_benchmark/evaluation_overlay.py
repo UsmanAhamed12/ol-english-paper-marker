@@ -12,6 +12,7 @@ from app.core.exceptions import EvidenceSeparationError
 from app.evaluation.evidence_benchmark.annotations import EvidenceAnnotation
 from app.evaluation.evidence_benchmark.models import EvidenceBenchmarkSample
 from app.evaluation.evidence_expansion.models import EvidenceExpansionSample
+from app.evaluation.teacher_evidence.models import TeacherEvidenceSample
 from app.evidence.models import EvidenceType, TestEvidence
 from app.ocr.models import BoundingBox
 
@@ -24,7 +25,7 @@ _COLORS = {
 
 
 def render_evaluation_overlay(
-    sample: EvidenceBenchmarkSample | EvidenceExpansionSample,
+    sample: EvidenceBenchmarkSample | EvidenceExpansionSample | TeacherEvidenceSample,
     annotation: EvidenceAnnotation,
     evidence: TestEvidence,
     sample_image_path: Path,

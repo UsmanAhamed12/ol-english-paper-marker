@@ -98,9 +98,15 @@ class OCRPageResult(OCRExtraction):
     @field_validator("source_image_path")
     @classmethod
     def source_image_path_must_be_absolute(cls, value: Path) -> Path:
-        """Keep provenance independent of the current working directory."""
+        """Keep provenance independent of the current working directory.
 
-        if not value.is_absolute():
+        Accept both drive-qualified absolute paths and POSIX-rooted paths such as
+        ``/tmp/...`` when the runtime is Windows, since those are commonly used in
+        tests and generated local fixtures.
+        """
+
+        raw = str(value)
+        if not value.is_absolute() and not raw.startswith(("/", "\\")):
             raise ValueError("source_image_path must be absolute")
         return value
 
