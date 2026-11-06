@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import ipaddress
 import json
 import urllib.error
 import urllib.request
@@ -11,9 +10,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Protocol, cast
-from urllib.parse import urlparse
 
 from app.core.exceptions import ApplicationError, ConfigurationError, OCRProviderError
+from app.core.ollama import (
+    is_ollama_cloud_model,
+    validate_local_ollama_base_url,
+)
 from app.domain.models.paper import PaperPage
 from app.ocr.models import OCRExtraction
 from app.ocr.prompts import OCR_TRANSCRIPTION_PROMPT
@@ -96,7 +98,7 @@ class OllamaHTTPClient:
     """Minimal Ollama REST client restricted to a loopback endpoint."""
 
     def __init__(self, *, base_url: str, timeout_seconds: float) -> None:
-        self._base_url = _validate_local_base_url(base_url)
+        self._base_url = validate_local_ollama_base_url(base_url)
         self._timeout_seconds = timeout_seconds
 
     def version(self) -> str:
@@ -282,7 +284,7 @@ class OllamaOCRProvider:
     ) -> None:
         if not model.strip():
             raise ConfigurationError("Ollama OCR model must not be blank")
-        if _is_cloud_model(model):
+        if is_ollama_cloud_model(model):
             raise ConfigurationError("Ollama cloud models are not permitted for OCR")
         self._client = client
         self._model = model
@@ -341,40 +343,6 @@ class OllamaOCRProvider:
             confidence=None,
             processing_duration_ms=duration_ms,
         )
-
-
-def _validate_local_base_url(base_url: str) -> str:
-    parsed = urlparse(base_url)
-    if parsed.scheme not in {"http", "https"} or parsed.username is not None:
-        raise ConfigurationError("OLLAMA_BASE_URL must be a local HTTP endpoint")
-    if (
-        parsed.password is not None
-        or parsed.query
-        or parsed.fragment
-        or parsed.path
-        not in {
-            "",
-            "/",
-        }
-    ):
-        raise ConfigurationError("OLLAMA_BASE_URL must be a local HTTP endpoint")
-    host = parsed.hostname
-    if host is None:
-        raise ConfigurationError("OLLAMA_BASE_URL must be a local HTTP endpoint")
-    if host != "localhost":
-        try:
-            if not ipaddress.ip_address(host).is_loopback:
-                raise ConfigurationError("OLLAMA_BASE_URL must use a loopback address")
-        except ValueError as error:
-            raise ConfigurationError(
-                "OLLAMA_BASE_URL must use a loopback address"
-            ) from error
-    return base_url.rstrip("/")
-
-
-def _is_cloud_model(model: str) -> bool:
-    normalized = model.casefold()
-    return normalized.endswith("-cloud") or normalized.endswith(":cloud")
 
 
 def _parse_chat_response(

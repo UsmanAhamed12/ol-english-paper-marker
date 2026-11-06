@@ -6,6 +6,8 @@ import json
 
 import pytest
 
+from app.answers.models import AnswerExtractionStatus
+from app.feedback.models import QuestionFeedback, QuestionFeedbackStatus
 from app.ui.demo import DemoScenario, synthetic_demo_result
 from app.ui.presentation.formatting import humanize_code
 from app.ui.presentation.mapper import map_final_result
@@ -16,13 +18,46 @@ def test_completed_result_exposes_legitimate_final_score() -> None:
     view = map_final_result(synthetic_demo_result(DemoScenario.COMPLETED), is_demo=True)
     assert view.status == "Completed"
     assert view.tone is ViewTone.SUCCESS
-    assert view.score_heading == "Final score"
-    assert view.score_value == "10 / 10"
-    assert view.percentage == "100.0%"
+    assert view.score_heading == "Normalized score out of 100"
+    assert view.score_value == "100.00 / 100"
+    assert view.raw_score_value == "10 / 10"
+    assert view.percentage == "100.00%"
     assert view.unresolved_value is None
     assert view.is_final_score is True
     assert len(view.tests[0].criteria) == 2
     assert view.is_demo is True
+
+
+def test_question_feedback_and_provisional_status_are_presented() -> None:
+    result = synthetic_demo_result(DemoScenario.REVIEW).model_copy(
+        update={
+            "question_feedback": (
+                QuestionFeedback(
+                    test_number=1,
+                    status=QuestionFeedbackStatus.PROVISIONAL,
+                    feedback=(
+                        "Check the transcription before interpreting this response."
+                    ),
+                    improvement_tips=("Use a relevant supporting detail.",),
+                    answer_status=AnswerExtractionStatus.REVIEW_REQUIRED,
+                    provider="ollama",
+                    model_version="llama2:latest",
+                    prompt_version="question-feedback-v2",
+                ),
+            )
+        }
+    )
+
+    view = map_final_result(result)
+
+    assert view.score_heading == "Confirmed marks"
+    assert view.score_value == "4 of 10 known marks"
+    assert view.percentage is None
+    assert view.tests[0].formative_feedback_status == "provisional"
+    assert view.tests[0].formative_feedback == (
+        "Check the transcription before interpreting this response."
+    )
+    assert view.tests[0].improvement_tips == ("Use a relevant supporting detail.",)
 
 
 def test_review_result_never_presents_confirmed_marks_as_final() -> None:

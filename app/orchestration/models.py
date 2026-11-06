@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.feedback.models import QuestionFeedback
 from app.marking.subjective.models import CombinedTestMarkResult
 
 NonNegativeMarks = Annotated[Decimal, Field(ge=0)]
@@ -39,7 +40,9 @@ class PipelineStage(StrEnum):
     TEST_ALIGNMENT = "test_alignment"
     OBJECTIVE_MARKING = "objective_marking"
     SUBJECTIVE_MARKING = "subjective_marking"
+    FORMATIVE_FEEDBACK = "formative_feedback"
     RESULT_AGGREGATION = "result_aggregation"
+    HUMAN_REVIEW = "human_review"
 
 
 class StageStatus(StrEnum):
@@ -177,6 +180,7 @@ class FinalPaperMarkingResult(BaseModel):
     test_results: tuple[CombinedTestMarkResult, ...] = ()
     feedback: tuple[CriterionFeedback, ...] = ()
     review_items: tuple[ReviewItem, ...] = ()
+    question_feedback: tuple[QuestionFeedback, ...] = ()
     stages: tuple[StageSummary, ...]
     warnings: tuple[Annotated[str, Field(min_length=1)], ...] = ()
     errors: tuple[OrchestrationIssue, ...] = ()
@@ -219,4 +223,9 @@ class FinalPaperMarkingResult(BaseModel):
         ids = objective_ids + subjective_ids
         if len(ids) != len(set(ids)):
             raise ValueError("A criterion cannot be counted by multiple engines")
+        feedback_tests = tuple(item.test_number for item in self.question_feedback)
+        if len(feedback_tests) != len(set(feedback_tests)):
+            raise ValueError("Question feedback must be unique per Test")
+        if any(number not in self.detected_tests for number in feedback_tests):
+            raise ValueError("Question feedback must belong to a detected Test")
         return self

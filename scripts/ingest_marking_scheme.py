@@ -12,12 +12,14 @@ from app.core.config import Settings
 from app.ingestion.pdf_loader import PDFLoader
 from app.ingestion.pdf_renderer import PDFRenderer
 from app.ingestion.validators import PDFValidator
+from app.marking_scheme.indexing import MarkingSchemeIndexingService
 from app.marking_scheme.ingestion import MarkingSchemeIngestionService
 from app.marking_scheme.parser import MarkingSchemeParser
 from app.marking_scheme.serialization import write_private_json
 from app.ocr.normalizer import OCRNormalizer
 from app.ocr.providers.tesseract import TesseractOCRProvider
 from app.ocr.service import OCRService
+from app.vectorstore.chroma_store import ChromaKnowledgeBaseStore
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -25,10 +27,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", type=Path, help="Private local marking-scheme PDF")
+    parser.add_argument(
+        "--index",
+        action="store_true",
+        help="Embed parsed chunks with Ollama and index them in local Chroma",
+    )
     return parser
 
 
-def ingest_path(path: Path, *, settings: Settings | None = None) -> dict[str, Any]:
+def ingest_path(
+    path: Path,
+    *,
+    settings: Settings | None = None,
+    index: bool = False,
+) -> dict[str, Any]:
     """Run shared ingestion/OCR infrastructure and return safe counts only."""
 
     settings = settings or Settings()
@@ -57,6 +69,11 @@ def ingest_path(path: Path, *, settings: Settings | None = None) -> dict[str, An
         private_root / "results" / f"{scheme.scheme_id.hex}.json",
         private_root=private_root,
     )
+    indexing_report = None
+    if index:
+        indexing_report = MarkingSchemeIndexingService(
+            ChromaKnowledgeBaseStore.from_settings(settings)
+        ).index(scheme)
     return {
         "pages": scheme.page_count,
         "tests_detected": len(scheme.tests),
@@ -74,6 +91,7 @@ def ingest_path(path: Path, *, settings: Settings | None = None) -> dict[str, An
         "provider": provider.name,
         "model_version": provider.model_version,
         "private_output": "data/runtime/marking-schemes/results/<scheme-id>.json",
+        "indexing": indexing_report,
     }
 
 
@@ -81,7 +99,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Execute the local ingestion command without dumping source text."""
 
     arguments = build_parser().parse_args(argv)
-    print(json.dumps(ingest_path(arguments.path), indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            ingest_path(arguments.path, index=arguments.index),
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 

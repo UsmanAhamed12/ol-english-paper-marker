@@ -102,6 +102,7 @@ It contains no private paper, transcription, identity, or official scheme.
 - Component matching depends on explicit component allocations.
 - Subjective accuracy against official human marks remains unmeasured.
 
-See `docs/subjective-marking.md`. The accepted next phase is **Phase 6 —
-End-to-End Marking Orchestration**. Phase 6 now invokes this engine exactly once
-and retains its awards unchanged inside the combined final result.
+See `docs/subjective-marking.md`. The end-to-end orchestration invokes this
+engine exactly once and retains its awards unchanged. Combined objective and
+subjective aggregation validates Test and paper totals against known official
+maxima; a definitive score remains unavailable while any marks are unresolved.

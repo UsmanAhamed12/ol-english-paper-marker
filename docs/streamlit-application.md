@@ -2,28 +2,43 @@
 
 ## Status and scope
 
-Phase 7 adds a local Streamlit presentation layer to the accepted Phase 6
-orchestrator. It is a final-year project prototype, not a claim of validated
-official examination-marking accuracy. The UI contains no OCR, alignment,
-scheme parsing, or marking rules.
+The Streamlit interface offers the local marking pipeline and a Groq vision
+marking path. The project is a prototype, not a claim of validated official
+examination-marking accuracy.
 
 ```text
 Streamlit upload and presentation
               |
               v
-     PaperMarkingService
-              |
+       ┌──────┴───────┐
+       v              v
+ Local marking    Groq vision
+ pipeline         transcription + grading
+       |              |
+       └──────┬───────┘
               v
-   FinalPaperMarkingResult
+      question-level results
               |
-              v
- deterministic ResultViewModel
-              |
-              v
- summary / Tests / feedback / review / download
+      score / 100 + review
 ```
 
-## Prerequisites and installation
+ ## Navigation
+
+ The application provides five focused pages:
+
+ - **Overview** — current browser-session status and direct links to the main tasks.
+ - **Mark a Paper** — upload both PDFs, choose an engine, and explicitly start.
+ - **Results** — question marks, explanations, improvement tips, OCR text, and a
+   JSON export.
+ - **Review Queue** — items flagged for examiner attention; review is read-only.
+ - **About & Readiness** — configured local runtime values, data handling, and
+   known limitations.
+
+ Results and review items are shared across pages through the active Streamlit
+ session. They are not a persistent run history and are unavailable after that
+ session ends.
+
+ ## Prerequisites and installation
 
 Use Python 3.12 and install the locked environment:
 
@@ -31,23 +46,23 @@ Use Python 3.12 and install the locked environment:
 uv sync
 ```
 
-Real processing also requires:
+Local processing requires:
 
 - local Tesseract with the configured `eng` language data;
 - a running local Ollama endpoint at `OLLAMA_BASE_URL`;
 - the configured `OLLAMA_GRADING_MODEL` installed locally;
 - one student answer PDF and its corresponding official marking-scheme PDF.
 
-The application never installs system software automatically. Missing
-Tesseract is shown as a safe setup error. Ollama/model failures remain failed or
-review-required backend outcomes; the UI never substitutes a cloud model.
+Groq processing requires a Groq API key in `.env` and a vision-capable model
+enabled for the account. The application never installs system software
+automatically. It does not silently switch between local and cloud providers.
 
 ## Launch
 
 From the repository root:
 
 ```bash
-uv run streamlit run streamlit_app.py
+uv run python -m streamlit run streamlit_app.py
 ```
 
 Streamlit serves the application on `127.0.0.1`. Repository configuration
@@ -67,35 +82,47 @@ marking-scheme.pdf
 
 Original filenames are never used for materialized paths. Writes use a
 same-directory temporary file and atomic replacement. Upload copies are removed
-after the synchronous service call and on reset where applicable. The validated
-`FinalPaperMarkingResult` remains in the current Streamlit session only unless
-the user explicitly downloads it.
+after the synchronous service call and on reset where applicable. Results
+remain in the current Streamlit session only unless the user explicitly
+downloads them.
 
 Private uploaded PDFs, OCR text, model responses, and marking results are not
-globally cached. The page calls `PaperMarkingService` exactly once per explicit
-Mark Paper action and disables another run until Mark Another Paper resets the
-session.
+globally cached. Groq mode displays an explicit cloud-processing notice and
+requires per-run confirmation before sending either PDF to Groq. The local mode
+continues to use the existing on-device pipeline.
 
 ## Processing and results
 
-Processing is sequential. The active status explains that OCR and local model
-marking can take several minutes on the M1; it does not invent percentages.
-After completion, measured backend stage statuses and durations are available
-in an expander.
+Processing is sequential. Groq mode renders each PDF page to a bounded JPEG,
+sends it to the configured vision model for separate printed/handwritten
+transcription, then asks the same model to grade the full paper against the
+extracted scheme. The application validates every question score and computes
+the total and normalized score out of 100 in Python. If rubric maxima are
+missing or a question is flagged, the result is marked provisional or the
+normalized score is withheld. Local mode uses the existing pipeline.
 
-The result mapper preserves Phase 6 score semantics:
+The interface uses a restrained academic visual style, grouped page navigation,
+a compact local-workspace sidebar, page-specific headings, a four-step
+workflow guide, paired upload cards, and consistent score and review panels.
+It uses native Streamlit controls and inline styling only; no remote fonts,
+images, or frontend packages are loaded. Visual styling does not change
+marking, confidence, or review decisions. Surfaces and accents adapt to
+Streamlit's System, Light, and Dark appearance choices; use the top-right
+Streamlit menu's **Theme** options to switch.
 
-- a **Final score** and percentage appear only for `COMPLETED` with no
-  unresolved marks;
+Local results preserve the existing score semantics:
+
+- a **Normalized score out of 100** appears only for `COMPLETED` with no
+  unresolved marks; the original scheme score is also shown;
 - otherwise the page says **Confirmed marks**, displays unresolved marks, and
-  suppresses a definitive percentage;
+  suppresses a definitive normalized score;
 - `PARTIALLY_COMPLETED` retains every usable Test result;
 - `FAILED` displays only safe mapped errors and no traceback.
 
-Each Test expander shows confirmed, maximum, unresolved, objective, and
-subjective marks plus its criterion decisions and existing criterion-grounded
-feedback. The review queue shows the Test, criterion, reason, status, and marks
-affected. No additional model call summarizes or rewrites feedback.
+Groq results show each question's transcription, awarded and maximum marks,
+explanation, feedback, and improvement tips. OCR text for both PDFs and the
+result JSON can contain sensitive student information. Model output is
+unverified; teachers must check it against the original paper and scheme.
 
 The JSON download uses the Phase 6 deterministic serializer. It can contain
 private answer/marking evidence and must be protected by the user.
@@ -106,7 +133,7 @@ There is currently no official marking-scheme PDF in repository private
 storage. Presentation QA can be enabled explicitly:
 
 ```bash
-UI_DEMO_ENABLED=true uv run streamlit run streamlit_app.py
+UI_DEMO_ENABLED=true uv run python -m streamlit run streamlit_app.py
 ```
 
 The Developer / Synthetic Demo expander provides completed, review-required,
@@ -119,10 +146,11 @@ real processing failure.
 
 ## Phase 7 verification
 
-Synthetic, private-data-free QA covered the desktop upload layout, one- and
-two-file readiness states, active processing status, completed, review-required,
-partially completed, and failed results, Test/criterion expanders, feedback,
-the review queue, JSON download, and reset. A separate synthetic-PDF handoff
+Synthetic, private-data-free QA covers the Overview, Mark a Paper, Results, and
+Review Queue routes, their empty states, one- and two-file readiness states,
+active processing status, completed, review-required, partially completed, and
+failed result presentation, Test/criterion expanders, feedback, the review
+queue, JSON download, and reset. A separate synthetic-PDF handoff
 reached the real `PaperMarkingService`; its deliberately unusable scheme was
 reported as a safe scheme-ingestion failure, and temporary upload copies were
 removed. This verifies application wiring, not marking accuracy.

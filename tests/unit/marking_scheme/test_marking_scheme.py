@@ -258,6 +258,63 @@ def test_accepted_answer_variants_are_split_conservatively() -> None:
     assert criterion.accepted_answers == ("colour", "color")
 
 
+def test_parenthesized_numbered_answer_key_is_split_into_scored_items() -> None:
+    tests = MarkingSchemeParser().parse(
+        (
+            SourceLine(page_number=1, text="Test 01"),
+            SourceLine(page_number=1, text="(01) c (02) e (03) f"),
+            SourceLine(page_number=1, text="(04) a (05) d (06) b"),
+        )
+    )
+
+    assert len(tests[0].criteria) == 6
+    assert tuple(item.accepted_answers for item in tests[0].criteria) == (
+        ("c",),
+        ("e",),
+        ("f",),
+        ("a",),
+        ("d",),
+        ("b",),
+    )
+    assert all(item.maximum_marks == 1 for item in tests[0].criteria)
+    assert tests[0].maximum_marks == 6
+    assert all(
+        item.provenance.parser_rule is CriterionParserRule.PARENTHESIZED_ANSWER_KEY
+        for item in tests[0].criteria
+    )
+
+
+def test_parenthesized_lettered_answer_key_and_ocr_number_confusions() -> None:
+    tests = MarkingSchemeParser().parse(
+        (
+            SourceLine(page_number=1, text="Test 05"),
+            SourceLine(page_number=1, text="(a) krill/tiny organisms (b) blubber"),
+            SourceLine(page_number=1, text="(Ol) colour (02) harbour"),
+        )
+    )
+
+    assert tuple(item.criterion_type for item in tests[0].criteria) == (
+        CriterionType.ACCEPTED_VARIANTS,
+        CriterionType.EXACT_ANSWER,
+        CriterionType.EXACT_ANSWER,
+        CriterionType.EXACT_ANSWER,
+    )
+    assert tests[0].criteria[0].accepted_answers == ("krill", "tiny organisms")
+    assert all(item.maximum_marks == 1 for item in tests[0].criteria)
+
+
+def test_unsequenced_parenthesized_text_remains_unknown() -> None:
+    tests = MarkingSchemeParser().parse(
+        (
+            SourceLine(page_number=1, text="Test 06"),
+            SourceLine(page_number=1, text="Any suitable answer (1 mark)"),
+        )
+    )
+
+    assert len(tests[0].criteria) == 1
+    assert tests[0].criteria[0].criterion_type is CriterionType.UNKNOWN
+
+
 def test_explicit_allocations_are_summed_when_every_criterion_has_marks() -> None:
     tests = MarkingSchemeParser().parse(
         (

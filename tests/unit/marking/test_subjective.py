@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
+from pydantic import ValidationError
 
 from app.answers.models import (
     AnswerExtractionProvenance,
@@ -26,10 +27,12 @@ from app.core.exceptions import (
 )
 from app.marking.subjective.combined import CombinedMarkingService
 from app.marking.subjective.models import (
+    CombinedPaperMarkingResult,
+    CombinedTestMarkResult,
     ImprovementAdviceStatus,
-    SyllabusEvidenceReference,
     SubjectiveMarkingStatus,
     SubjectiveReasonCode,
+    SyllabusEvidenceReference,
 )
 from app.marking.subjective.prompting import build_subjective_prompt
 from app.marking.subjective.provider import SubjectiveProviderResponse
@@ -55,6 +58,7 @@ from app.vectorstore.models import KnowledgeDocument, KnowledgeSearchResult
 
 PAPER_ID = UUID("70000000-0000-0000-0000-000000000007")
 SCHEME_ID = UUID("80000000-0000-0000-0000-000000000008")
+SYLLABUS_TEXT = "Students develop coherent paragraphs with suitable linking words."
 
 
 class FakeSubjectiveProvider:
@@ -257,7 +261,7 @@ def _syllabus_store(
     return FakeSyllabusStore(
         (
             KnowledgeSearchResult(
-                text="Students develop coherent paragraphs with suitable linking words.",
+                text=SYLLABUS_TEXT,
                 metadata={
                     "source_type": "syllabus",
                     "source_id": source_id,
@@ -352,8 +356,7 @@ def test_missing_syllabus_withholds_tips_without_discarding_valid_marks() -> Non
     assert result.awarded_marks == Decimal("3")
     assert result.improvement_tips == ()
     assert (
-        result.improvement_advice_status
-        is ImprovementAdviceStatus.SYLLABUS_NOT_INDEXED
+        result.improvement_advice_status is ImprovementAdviceStatus.SYLLABUS_NOT_INDEXED
     )
 
 
@@ -369,7 +372,9 @@ def test_invalid_tips_do_not_invalidate_a_safe_mark() -> None:
     assert result.status is SubjectiveMarkingStatus.MARKED
     assert result.awarded_marks == Decimal("3")
     assert result.improvement_tips == ()
-    assert result.improvement_advice_status is ImprovementAdviceStatus.INVALID_MODEL_TIPS
+    assert (
+        result.improvement_advice_status is ImprovementAdviceStatus.INVALID_MODEL_TIPS
+    )
 
 
 def test_model_cannot_use_non_syllabus_sources_for_improvement_tips() -> None:
@@ -383,8 +388,7 @@ def test_model_cannot_use_non_syllabus_sources_for_improvement_tips() -> None:
     assert result.awarded_marks == Decimal("3")
     assert result.improvement_tips == ()
     assert (
-        result.improvement_advice_status
-        is ImprovementAdviceStatus.SYLLABUS_NOT_INDEXED
+        result.improvement_advice_status is ImprovementAdviceStatus.SYLLABUS_NOT_INDEXED
     )
 
 
@@ -590,6 +594,25 @@ def test_combined_result_preserves_objective_marks_and_unresolved_semantics() ->
     assert result.confirmed_marks == 4
     assert result.final_score == 4
     assert len(provider.prompts) == 1
+
+
+def test_combined_aggregates_reject_scores_above_official_maximum() -> None:
+    objective = _criterion(CriterionType.EXACT_ANSWER, index=1, maximum=Decimal("1"))
+    subjective = _criterion(CriterionType.HOLISTIC, index=2, maximum=Decimal("4"))
+    provider = FakeSubjectiveProvider(_response(subjective, award="3"))
+    result = CombinedMarkingService(SubjectiveMarkingService(provider)).mark_paper(
+        _paper(_aligned((objective, subjective), answer=_answer("yes")))
+    )
+
+    test_payload = result.test_results[0].model_dump()
+    test_payload["maximum_known_marks"] = Decimal("3")
+    with pytest.raises(ValidationError, match="exceed the known maximum"):
+        CombinedTestMarkResult.model_validate(test_payload)
+
+    paper_payload = result.model_dump()
+    paper_payload["maximum_known_marks"] = Decimal("3")
+    with pytest.raises(ValidationError, match="exceed the known maximum"):
+        CombinedPaperMarkingResult.model_validate(paper_payload)
 
 
 def test_combined_result_with_review_has_no_false_final_score() -> None:

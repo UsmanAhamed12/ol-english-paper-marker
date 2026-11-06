@@ -19,7 +19,7 @@ from app.marking_scheme.models import (
 )
 from app.ocr.models import BoundingBox, OCRWord
 
-PARSER_VERSION = "marking-scheme-parser-v1"
+PARSER_VERSION = "marking-scheme-parser-v2"
 _TEST_MARKER = re.compile(
     r"^\s*test\s*0*([1-9]\d?)(?=$|\s|[:.\-])(?:\s*[:.\-]\s*|\s+)?(.*)$",
     re.IGNORECASE,
@@ -33,6 +33,7 @@ _MARK_ALLOCATION = re.compile(
     re.IGNORECASE,
 )
 _ITEM_PREFIX = re.compile(r"^\s*(?:(\d+|[A-Za-z])[.)]|[-*•])\s+")
+_PARENTHESIZED_ANSWER_KEY = re.compile(r"\(\s*([0-9OIl]{1,3}|[A-Za-z])\s*\)\s*")
 _LABELED = re.compile(
     r"^\s*(accepted answers?|keywords?|content|language|format|holistic)\s*:\s*(.+)$",
     re.IGNORECASE,
@@ -94,6 +95,18 @@ class MarkingSchemeParser:
             if total:
                 explicit_total = Decimal(total.group(1))
                 continue
+            keyed_answers = _keyed_answers(line.text)
+            if keyed_answers:
+                criteria.extend(
+                    _keyed_answer_criterion(
+                        test_number,
+                        len(criteria) + 1,
+                        line,
+                        answer,
+                    )
+                    for answer in keyed_answers
+                )
+                continue
             criteria.append(_criterion(test_number, len(criteria) + 1, line))
         maximum = explicit_total or _sum_explicit_marks(tuple(criteria))
         warnings: list[MarkingSchemeWarning] = []
@@ -115,6 +128,79 @@ class MarkingSchemeParser:
             source_regions=source_regions,
             warnings=tuple(warnings),
         )
+
+
+def _keyed_answers(line: str) -> tuple[tuple[str, str], ...]:
+    """Split consecutive parenthesized answer-key entries from one OCR line."""
+
+    matches = tuple(_PARENTHESIZED_ANSWER_KEY.finditer(line))
+    if len(matches) < 2 or line[: matches[0].start()].strip():
+        return ()
+
+    labels = tuple(match.group(1) for match in matches)
+    if all(label[0].isdigit() or label[0].casefold() in "oil" for label in labels):
+        normalized_numbers = tuple(_normalize_key_number(label) for label in labels)
+        if any(number is None for number in normalized_numbers):
+            return ()
+        numbers = tuple(number for number in normalized_numbers if number is not None)
+        if numbers != tuple(range(numbers[0], numbers[0] + len(numbers))):
+            return ()
+    elif all(label.isalpha() and len(label) == 1 for label in labels):
+        letters = tuple(label.casefold() for label in labels)
+        if letters != tuple(
+            chr(ord(letters[0]) + index) for index in range(len(letters))
+        ):
+            return ()
+    else:
+        return ()
+
+    answers = tuple(
+        line[match.end() : matches[index + 1].start()].strip(" \t:;")
+        if index + 1 < len(matches)
+        else line[match.end() :].strip(" \t:;")
+        for index, match in enumerate(matches)
+    )
+    if any(not answer for answer in answers):
+        return ()
+    return tuple(zip(labels, answers, strict=True))
+
+
+def _normalize_key_number(label: str) -> int | None:
+    normalized = label.translate(str.maketrans("OoIlL", "00111"))
+    if len(normalized) == 3 and normalized[0] == normalized[1]:
+        normalized = normalized[1:]
+    if not normalized.isdigit():
+        return None
+    number = int(normalized)
+    return number if 1 <= number <= 99 else None
+
+
+def _keyed_answer_criterion(
+    test_number: int,
+    index: int,
+    line: SourceLine,
+    answer: tuple[str, str],
+) -> MarkingCriterion:
+    _, description = answer
+    variants = _split_variants(description)
+    kind = (
+        CriterionType.ACCEPTED_VARIANTS
+        if len(variants) > 1
+        else CriterionType.EXACT_ANSWER
+    )
+    return MarkingCriterion(
+        criterion_id=f"test-{test_number:02d}-criterion-{index:03d}",
+        test_number=test_number,
+        criterion_type=kind,
+        description=description,
+        accepted_answers=variants,
+        maximum_marks=Decimal("1"),
+        partial_credit_allowed=False,
+        provenance=CriterionProvenance(
+            parser_rule=CriterionParserRule.PARENTHESIZED_ANSWER_KEY,
+            source=_source_region(line),
+        ),
+    )
 
 
 def lines_from_words(

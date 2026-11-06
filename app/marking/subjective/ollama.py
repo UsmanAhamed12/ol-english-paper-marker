@@ -2,30 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from time import perf_counter
+
+import httpx
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from ollama import ResponseError
 
 from app.core.exceptions import (
     ConfigurationError,
     SubjectiveMarkingProviderError,
     SubjectiveMarkingTimeoutError,
 )
+from app.core.ollama import is_ollama_cloud_model
 from app.marking.subjective.provider import SubjectiveProviderResponse
-from app.ocr.providers.ollama import (
-    GenerationValue,
-    OllamaConnectionError,
-    OllamaModelNotFoundError,
-    OllamaResponseError,
-    OllamaTextClient,
-    OllamaTimeoutError,
-    _is_cloud_model,
-)
-
-DETERMINISTIC_GRADING_OPTIONS: dict[str, GenerationValue] = {
-    "temperature": 0.0,
-    "seed": 0,
-    "num_predict": 1024,
-}
 
 
 class OllamaSubjectiveMarkingProvider:
@@ -34,21 +24,18 @@ class OllamaSubjectiveMarkingProvider:
     def __init__(
         self,
         *,
-        client: OllamaTextClient,
+        chat_model: BaseChatModel,
         model: str,
         model_version: str | None = None,
-        options: Mapping[str, GenerationValue] | None = None,
     ) -> None:
         if not model.strip():
             raise ConfigurationError("Ollama grading model must not be blank")
-        if _is_cloud_model(model):
+        if is_ollama_cloud_model(model):
             raise ConfigurationError(
                 "Ollama cloud models are not permitted for grading"
             )
-        self._client = client
-        self._model = model
+        self._chat_model = chat_model
         self._model_version = model_version or model
-        self._options = dict(options or DETERMINISTIC_GRADING_OPTIONS)
 
     @property
     def name(self) -> str:
@@ -61,27 +48,30 @@ class OllamaSubjectiveMarkingProvider:
     def assess(self, prompt: str) -> SubjectiveProviderResponse:
         started = perf_counter()
         try:
-            response = self._client.chat_text(
-                model=self._model,
-                prompt=prompt,
-                options=self._options,
-                response_format="json",
-            )
-        except OllamaTimeoutError as error:
+            response = self._chat_model.invoke(prompt)
+        except (httpx.TimeoutException, TimeoutError) as error:
             raise SubjectiveMarkingTimeoutError(
                 "Local subjective marking request timed out"
             ) from error
-        except (OllamaModelNotFoundError, OllamaConnectionError) as error:
+        except (
+            ResponseError,
+            httpx.HTTPError,
+            OSError,
+            RuntimeError,
+            ValueError,
+        ) as error:
             raise SubjectiveMarkingProviderError(
                 "Local subjective marking provider is unavailable"
             ) from error
-        except OllamaResponseError as error:
+        if not isinstance(response, AIMessage) or not isinstance(response.content, str):
             raise SubjectiveMarkingProviderError(
                 "Local subjective marking provider returned an invalid response"
-            ) from error
+            )
+        total_duration_ns = response.response_metadata.get("total_duration")
         duration = (
-            response.total_duration_ns / 1_000_000
-            if response.total_duration_ns is not None
+            total_duration_ns / 1_000_000
+            if isinstance(total_duration_ns, int)
+            and not isinstance(total_duration_ns, bool)
             else (perf_counter() - started) * 1000
         )
         return SubjectiveProviderResponse(

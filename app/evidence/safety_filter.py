@@ -76,7 +76,7 @@ class StudentCandidateSafetyFilter:
         region: EvidenceRegion,
         test: TestEvidence,
     ) -> CandidateSafetyDecision:
-        if region.evidence_type is not EvidenceType.STUDENT_CANDIDATE:
+        if region.evidence_type is EvidenceType.PRINTED:
             return _decision(
                 index,
                 region,
@@ -111,6 +111,20 @@ class StudentCandidateSafetyFilter:
                 region,
                 CandidateDisposition.REJECTED_NON_STUDENT,
                 SafetyReason.TINY_NOISE,
+            )
+        if region.evidence_type is EvidenceType.UNKNOWN:
+            return _decision(
+                index,
+                region,
+                CandidateDisposition.REVIEW_REQUIRED,
+                SafetyReason.UNCERTAIN_CLASSIFICATION,
+            )
+        if region.evidence_type is EvidenceType.TEACHER_CANDIDATE:
+            return _decision(
+                index,
+                region,
+                CandidateDisposition.REVIEW_REQUIRED,
+                SafetyReason.TEACHER_EVIDENCE_CLASSIFIED,
             )
         teacher_reasons = _teacher_risk(region, test, expected_space)
         if teacher_reasons:

@@ -41,8 +41,10 @@ incomplete Tests. The models are immutable Pydantic value objects.
 Only `SAFE_STUDENT` regions are cropped and sent to OCR.
 `REVIEW_REQUIRED` evidence is retained with geometry and reason codes but is
 never merged into trusted answer text. `REJECTED_NON_STUDENT` evidence is
-excluded. No safe or review evidence produces a valid `EMPTY` answer without
-calling OCR.
+excluded. Unknown or teacher-classified evidence is quarantined for review;
+multiple uncertain candidates on one Test page are summarized as one
+Test-sized review region. A valid `EMPTY` answer is produced only when neither
+safe nor review-required evidence remains, without calling OCR.
 
 Historical evaluation scans already contain flattened teacher annotations.
 Private visual QA confirmed residual mixed evidence despite the accepted

@@ -25,6 +25,9 @@ def test_settings_load_safe_local_defaults(
         "data/syllabus/grade-10-english-syllabus-68d2609d3a1ea.pdf"
     )
     assert settings.ollama_embedding_model == "nomic-embed-text"
+    assert settings.groq_api_key is None
+    assert settings.groq_model == "meta-llama/llama-4-scout-17b-16e-instruct"
+    assert settings.groq_timeout_seconds == 300.0
     assert settings.chroma_persist_dir == Path("data/chroma")
     assert settings.chroma_collection_name == "ol_english_knowledge"
     assert settings.database_url is None
@@ -33,8 +36,9 @@ def test_settings_load_safe_local_defaults(
     assert settings.retrieval_top_k == 5
     assert settings.max_pdf_size_mb == 50
     assert settings.max_pdf_pages == 100
-    assert settings.pdf_render_dpi == 150
+    assert settings.pdf_render_dpi == 300
     assert settings.ollama_ocr_timeout_seconds == 900.0
+    assert settings.tesseract_executable is None
     assert settings.tesseract_language == "eng"
     assert settings.tesseract_psm == 6
     assert settings.tesseract_timeout_seconds == 120.0
@@ -53,6 +57,10 @@ def test_environment_variables_override_defaults(
     monkeypatch.setenv("MAX_PDF_PAGES", "25")
     monkeypatch.setenv("PDF_RENDER_DPI", "200")
     monkeypatch.setenv("UI_DEMO_ENABLED", "true")
+    monkeypatch.setenv("TESSERACT_EXECUTABLE", "C:\\OCR\\tesseract.exe")
+    monkeypatch.setenv("GROQ_API_KEY", "synthetic-groq-key")
+    monkeypatch.setenv("GROQ_MODEL", "synthetic-vision-model")
+    monkeypatch.setenv("GROQ_TIMEOUT_SECONDS", "90")
 
     settings = Settings()
 
@@ -63,6 +71,11 @@ def test_environment_variables_override_defaults(
     assert settings.max_pdf_pages == 25
     assert settings.pdf_render_dpi == 200
     assert settings.ui_demo_enabled is True
+    assert settings.tesseract_executable == Path("C:\\OCR\\tesseract.exe")
+    assert settings.groq_api_key is not None
+    assert settings.groq_api_key.get_secret_value() == "synthetic-groq-key"
+    assert settings.groq_model == "synthetic-vision-model"
+    assert settings.groq_timeout_seconds == 90.0
 
 
 @pytest.mark.parametrize(
@@ -79,6 +92,7 @@ def test_environment_variables_override_defaults(
         ("OLLAMA_OCR_TIMEOUT_SECONDS", "0"),
         ("TESSERACT_PSM", "14"),
         ("TESSERACT_TIMEOUT_SECONDS", "0"),
+        ("GROQ_TIMEOUT_SECONDS", "0"),
     ],
 )
 def test_invalid_environment_configuration_is_rejected(

@@ -61,13 +61,17 @@ def build_subjective_prompt(
         }
         for item in syllabus_evidence
     ]
-    return template.replace(
-        "{{CRITERION_JSON}}",
-        json.dumps(criterion_payload, ensure_ascii=False, sort_keys=True),
-    ).replace(
-        "{{STUDENT_JSON}}",
-        json.dumps(student_payload, ensure_ascii=False, sort_keys=True),
-    ).replace(
-        "{{SYLLABUS_JSON}}",
-        json.dumps(syllabus_payload, ensure_ascii=False, sort_keys=True),
+    return (
+        template.replace(
+            "{{CRITERION_JSON}}",
+            json.dumps(criterion_payload, ensure_ascii=False, sort_keys=True),
+        )
+        .replace(
+            "{{STUDENT_JSON}}",
+            json.dumps(student_payload, ensure_ascii=False, sort_keys=True),
+        )
+        .replace(
+            "{{SYLLABUS_JSON}}",
+            json.dumps(syllabus_payload, ensure_ascii=False, sort_keys=True),
+        )
     )

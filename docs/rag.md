@@ -18,6 +18,13 @@ The existing marking-scheme ingestion remains a separate OCR-backed pipeline.
 Syllabus retrieval is not yet wired into marking prompts or the Streamlit
 workflow, and no claim about grading accuracy is made from indexing alone.
 
+Parsed marking schemes now have a separate question-aware chunking boundary.
+Each parsed criterion becomes an independently filterable chunk with exact
+Test, criterion, source-page, and mark metadata. A Test without criteria keeps
+its source lines in a Test-level fallback chunk. They can now be embedded and
+indexed in the same Chroma collection as the syllabus, preserving exact Test
+and scheme metadata. Retrieval is not yet connected to grading.
+
 ## Index the syllabus
 
 Install/start Ollama and pull the configured embedding model:
@@ -42,12 +49,33 @@ The embedding model is configurable with `OLLAMA_EMBEDDING_MODEL`. The Chroma
 collection and persistence path are configurable with `CHROMA_COLLECTION_NAME`
 and `CHROMA_PERSIST_DIR`.
 
+## Index a marking scheme
+
+The marking-scheme command remains parse-only by default. To also create local
+Ollama embeddings and add its question-aware chunks to Chroma, pull the
+configured embedding model and pass `--index`:
+
+```bash
+ollama pull nomic-embed-text
+uv run python -m scripts.ingest_marking_scheme /private/path/to/scheme.pdf --index
+```
+
+Indexing reports only safe counts and identifiers; OCR text and chunk content
+remain in local runtime storage. Scheme chunks use their scheme ID as the
+replacement key, so re-indexing the same scheme replaces stale chunks without
+changing syllabus records. This phase provides indexing only; exact-Test
+retrieval and use in grading prompts are later work.
+
 ## Retrieval contract
 
-Application code uses `ChromaKnowledgeBaseStore.search` with a query, `k`, and
-optional metadata filters such as `{"source_type": "syllabus"}`. Future
-question-aware retrieval should combine marking-scheme chunks and syllabus
-chunks, constrain the scheme by exact Test/question metadata where available,
-and preserve the returned source/page metadata in grading results. Missing or
-irrelevant rubric evidence must continue to trigger review rather than guessed
-criteria.
+`MarkingSchemeRetriever.retrieve` accepts a query, scheme ID, exact Test number,
+and `k`. It applies metadata filters for `source_type`, `source_id`, `scheme_id`,
+and numeric `test_number` before Chroma ranks semantic matches. Returned chunks
+are checked again for matching scheme/Test identity and valid hash, criterion,
+and page provenance, then returned as typed `MarkingSchemeEvidence` records.
+
+No matches return an empty tuple. Callers must treat missing rubric evidence as
+a review condition, never as permission to guess criteria. The retriever is
+implemented but is not yet wired into grading prompts or the Streamlit marking
+workflow. Syllabus searches continue to use their separate
+`source_type="syllabus"` and stable syllabus `source_id` filters.

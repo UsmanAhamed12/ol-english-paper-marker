@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
 import chromadb.errors
 import httpx
@@ -71,11 +72,20 @@ class ChromaKnowledgeBaseStore:
     ) -> tuple[KnowledgeSearchResult, ...]:
         """Search the collection with optional Chroma metadata constraints."""
 
+        chroma_filter: dict[str, Any] | None = None
+        if metadata_filter:
+            filter_items = tuple(metadata_filter.items())
+            if len(filter_items) == 1:
+                chroma_filter = {filter_items[0][0]: filter_items[0][1]}
+            else:
+                chroma_filter = {
+                    "$and": [{key: {"$eq": value}} for key, value in filter_items]
+                }
         try:
             documents = self._vector_store.similarity_search(
                 query,
                 k=k,
-                filter=dict(metadata_filter.items()) if metadata_filter else None,
+                filter=chroma_filter,
             )
         except (
             chromadb.errors.ChromaError,

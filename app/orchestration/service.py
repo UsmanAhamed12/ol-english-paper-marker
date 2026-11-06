@@ -11,6 +11,8 @@ from uuid import UUID
 from pydantic import ValidationError
 
 from app.core.exceptions import ApplicationError, InvalidPDFError, OrchestrationError
+from app.feedback.models import QuestionFeedback, QuestionFeedbackStatus
+from app.feedback.service import PaperFeedbackService
 from app.marking.models import MarkingStatus
 from app.marking.subjective.combined import CombinedMarkingService
 from app.marking.subjective.models import (
@@ -56,6 +58,7 @@ class PaperMarkingService:
         alignment_service: TestAlignmentService,
         combined_marking_service: CombinedMarkingService,
         private_output_root: Path,
+        formative_feedback_service: PaperFeedbackService | None = None,
     ) -> None:
         self._input_validator = input_validator
         self._student_pipeline = student_pipeline
@@ -63,6 +66,7 @@ class PaperMarkingService:
         self._alignment = alignment_service
         self._combined = combined_marking_service
         self._private_output_root = private_output_root
+        self._formative_feedback = formative_feedback_service
 
     def mark_paper(self, request: PaperMarkingRequest) -> FinalPaperMarkingResult:
         """Run one complete paper and return a safe result for every outcome."""
@@ -233,6 +237,28 @@ class PaperMarkingService:
             )
         )
 
+        question_feedback: tuple[QuestionFeedback, ...] = ()
+        if self._formative_feedback is not None:
+            feedback_started = perf_counter()
+            question_feedback = self._formative_feedback.generate(aligned)
+            feedback_failures = sum(
+                item.status is QuestionFeedbackStatus.FAILED
+                for item in question_feedback
+            )
+            feedback_warnings = (
+                (f"feedback_generation_failed:{feedback_failures}",)
+                if feedback_failures
+                else ()
+            )
+            stages.append(
+                self._complete_stage(
+                    PipelineStage.FORMATIVE_FEEDBACK,
+                    feedback_started,
+                    warnings=feedback_warnings,
+                    run_id=request.run_id,
+                )
+            )
+
         aggregation_started = perf_counter()
         try:
             combined = self._combined.combine(aligned, objective, subjective)
@@ -242,6 +268,7 @@ class PaperMarkingService:
                 scheme_output.scheme,
                 aligned,
                 combined,
+                question_feedback,
                 (
                     *stages,
                     self._complete_stage(
@@ -355,6 +382,7 @@ def _final_result(
     scheme: object,
     aligned: AlignedPaper,
     combined: CombinedPaperMarkingResult,
+    question_feedback: tuple[QuestionFeedback, ...],
     stages: tuple[StageSummary, ...],
     duration_ms: float,
 ) -> FinalPaperMarkingResult:
@@ -412,6 +440,7 @@ def _final_result(
         else None,
         test_results=combined.test_results,
         feedback=_feedback(combined),
+        question_feedback=question_feedback,
         review_items=review_items,
         stages=stages,
         warnings=warnings,

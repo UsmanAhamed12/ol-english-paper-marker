@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 
 from app.core.exceptions import ConfigurationError, OCRProviderError
+from app.core.ollama import validate_local_ollama_base_url
 from app.domain.models.paper import PaperPage
 from app.ocr.base import OCRProvider
 from app.ocr.prompts import OCR_TRANSCRIPTION_PROMPT
@@ -22,7 +23,6 @@ from app.ocr.providers.ollama import (
     OllamaOCRProvider,
     OllamaResponseError,
     OllamaTimeoutError,
-    _validate_local_base_url,
 )
 
 
@@ -156,7 +156,7 @@ def test_provider_handles_unreadable_image_without_path_leak(tmp_path: Path) -> 
 )
 def test_remote_or_invalid_ollama_endpoints_are_rejected(url: str) -> None:
     with pytest.raises(ConfigurationError, match="local|loopback"):
-        _validate_local_base_url(url)
+        validate_local_ollama_base_url(url)
 
 
 @pytest.mark.parametrize(
@@ -168,7 +168,7 @@ def test_remote_or_invalid_ollama_endpoints_are_rejected(url: str) -> None:
     ],
 )
 def test_loopback_ollama_endpoints_are_accepted(url: str, expected: str) -> None:
-    assert _validate_local_base_url(url) == expected
+    assert validate_local_ollama_base_url(url) == expected
 
 
 def test_http_client_rejects_malformed_chat_response(

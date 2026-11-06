@@ -201,6 +201,36 @@ def test_missing_tesseract_binary_is_wrapped(monkeypatch: pytest.MonkeyPatch) ->
         PyTesseractClient().version()
 
 
+def test_configured_tesseract_executable_is_used(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable = tmp_path / "tesseract.exe"
+    executable.touch()
+    monkeypatch.setattr(pytesseract.pytesseract, "tesseract_cmd", "tesseract")
+
+    PyTesseractClient(executable)
+
+    assert pytesseract.pytesseract.tesseract_cmd == str(executable)
+
+
+def test_standard_windows_install_is_discovered(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    executable = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+    monkeypatch.setattr("app.ocr.providers.tesseract.which", lambda _name: None)
+    monkeypatch.setattr(
+        Path,
+        "is_file",
+        lambda path: path == executable,
+    )
+    monkeypatch.setattr(pytesseract.pytesseract, "tesseract_cmd", "tesseract")
+
+    PyTesseractClient()
+
+    assert pytesseract.pytesseract.tesseract_cmd == str(executable)
+
+
 def test_pytesseract_timeout_is_wrapped(monkeypatch: pytest.MonkeyPatch) -> None:
     def timeout(*_args: object, **_kwargs: object) -> object:
         raise RuntimeError("Tesseract process timeout")

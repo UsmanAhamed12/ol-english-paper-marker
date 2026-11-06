@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import AnyHttpUrl, AnyUrl, Field
+from pydantic import AnyHttpUrl, AnyUrl, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -65,6 +65,10 @@ class Settings(BaseSettings):
     ollama_embedding_model: str = "nomic-embed-text"
     ollama_ocr_timeout_seconds: OllamaTimeoutSeconds = 900.0
     ollama_grading_timeout_seconds: OllamaTimeoutSeconds = 300.0
+    groq_api_key: SecretStr | None = None
+    groq_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    groq_timeout_seconds: OllamaTimeoutSeconds = 300.0
+    tesseract_executable: Path | None = None
     tesseract_language: str = "eng"
     tesseract_psm: TesseractPSM = 6
     tesseract_timeout_seconds: TesseractTimeoutSeconds = 120.0
@@ -78,7 +82,7 @@ class Settings(BaseSettings):
 
     max_pdf_size_mb: PositiveMegabytes = 50
     max_pdf_pages: PositivePageLimit = 100
-    pdf_render_dpi: RenderDPI = 150
+    pdf_render_dpi: RenderDPI = 300
     ui_demo_enabled: bool = False
 
 

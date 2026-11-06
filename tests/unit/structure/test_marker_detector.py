@@ -62,6 +62,49 @@ def test_nearby_punctuation_noise_is_skipped_but_retained_in_source_indexes(
     assert candidate.source_word_indices == (1, 2)
 
 
+def test_long_heading_line_with_leading_punctuation_is_not_penalized(
+    tmp_path: Path,
+) -> None:
+    paper_page = page(tmp_path)
+    words = (
+        word("§", x=20, y=100, line=1, word_number=1, width=20),
+        word("Test", x=100, y=100, line=1, word_number=2),
+        word("07", x=200, y=100, line=1, word_number=3),
+        word("prompt", x=300, y=100, line=1, word_number=4),
+        word("text", x=400, y=100, line=1, word_number=5),
+        word("continues", x=500, y=100, line=1, word_number=6),
+    )
+
+    candidates = detect_marker_candidates(paper_page, result(paper_page, words))
+
+    assert len(candidates) == 1
+    assert candidates[0].test_number == 7
+
+
+def test_heading_after_ocr_artifact_is_detected_but_prose_prefix_is_not(
+    tmp_path: Path,
+) -> None:
+    paper_page = page(tmp_path)
+    artifact_prefix = (
+        word("O", x=20, y=100, line=1, word_number=1, width=20),
+        word("Test", x=100, y=100, line=1, word_number=2),
+        word("07", x=200, y=100, line=1, word_number=3),
+    )
+    prose_prefix = (
+        word("This", x=20, y=300, line=2, word_number=1),
+        word("test", x=100, y=300, line=2, word_number=2),
+        word("08", x=200, y=300, line=2, word_number=3),
+    )
+
+    candidates = detect_marker_candidates(
+        paper_page,
+        result(paper_page, artifact_prefix + prose_prefix),
+    )
+
+    assert len(candidates) == 1
+    assert candidates[0].test_number == 7
+
+
 def test_isolated_dash_between_keyword_and_number_is_allowed(tmp_path: Path) -> None:
     paper_page = page(tmp_path)
     words = (

@@ -47,10 +47,11 @@ information and must not be logged.
 ## Rendering behavior
 
 `PDFRenderer` uses PyMuPDF to render each PDF page as an opaque PNG at the
-configured `PDF_RENDER_DPI`, currently 150 DPI. This is a moderate baseline for
-future handwriting OCR without choosing an extreme resolution. The Phase 0
-corpus already contains full-page raster scans; rendering performs no
-thresholding, deskewing, denoising, sharpening, or other OCR preprocessing.
+configured `PDF_RENDER_DPI`, currently 300 DPI. This higher resolution improved
+Test-heading recovery on a locally supplied 12-page student paper, though
+structure detection still requires review. The Phase 0 corpus already contains
+full-page raster scans; rendering performs no thresholding, deskewing,
+denoising, sharpening, or other OCR preprocessing.
 
 Domain page numbers start at 1. PyMuPDF's zero-based iteration is adapted to
 deterministic filenames:
@@ -88,7 +89,7 @@ security-sensitive.
 | --- | ---: | --- |
 | `MAX_PDF_SIZE_MB` | 50 | 1-1024 MiB |
 | `MAX_PDF_PAGES` | 100 | 1-1000 pages |
-| `PDF_RENDER_DPI` | 150 | 72-600 DPI |
+| `PDF_RENDER_DPI` | 300 | 72-600 DPI |
 | `RUNTIME_DATA_DIR` | `data/runtime` | local generated output root |
 
 ## Current limitations

@@ -77,6 +77,10 @@ class SubjectiveMarkingTimeoutError(SubjectiveMarkingProviderError):
     """Raised when local subjective inference exceeds its configured deadline."""
 
 
+class GroqMarkingError(ApplicationError):
+    """Raised when cloud OCR or marking cannot produce validated results."""
+
+
 class OrchestrationError(ApplicationError):
     """Raised when the top-level marking workflow cannot preserve safety."""
 

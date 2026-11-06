@@ -35,6 +35,7 @@ class CriterionParserRule(StrEnum):
     """Deterministic rule that produced a criterion classification."""
 
     NUMBERED_ANSWER = "numbered_answer"
+    PARENTHESIZED_ANSWER_KEY = "parenthesized_answer_key"
     ACCEPTED_ANSWER_VARIANTS = "accepted_answer_variants"
     KEYWORD_LABEL = "keyword_label"
     CONTENT_LABEL = "content_label"

@@ -193,6 +193,7 @@ def _safety(
     *,
     safe_boxes: tuple[BoundingBox, ...] = (),
     review_box: BoundingBox | None = None,
+    review_boxes: tuple[BoundingBox, ...] = (),
     rejected_box: BoundingBox | None = None,
 ) -> SafeTestExtraction:
     decisions: list[CandidateSafetyDecision] = []
@@ -220,14 +221,20 @@ def _safety(
                 detection_strategy="safe-student-region-v1",
             )
         )
-    if review_box is not None:
+    all_review_boxes = (*review_boxes, *((review_box,) if review_box else ()))
+    for bbox in all_review_boxes:
         index = len(decisions)
         decisions.append(
             CandidateSafetyDecision(
                 evidence_index=index,
                 disposition=CandidateDisposition.REVIEW_REQUIRED,
-                reasons=(SafetyReason.TEACHER_MARGIN_OR_SCORE_RISK,),
-                evidence=_evidence(page, test_number, review_box),
+                reasons=(SafetyReason.UNCERTAIN_CLASSIFICATION,),
+                evidence=_evidence(
+                    page,
+                    test_number,
+                    bbox,
+                    evidence_type=EvidenceType.UNKNOWN,
+                ),
             )
         )
     if rejected_box is not None:
@@ -242,7 +249,7 @@ def _safety(
         )
     status = (
         SafetyExtractionStatus.REVIEW_REQUIRED
-        if review_box is not None
+        if all_review_boxes
         else SafetyExtractionStatus.SAFE
         if safe_boxes
         else SafetyExtractionStatus.EMPTY
@@ -429,6 +436,33 @@ def test_review_evidence_is_preserved_but_not_ocrd(tmp_path: Path) -> None:
     assert len(answer.review_regions) == 1
     assert AnswerExtractionWarning.REVIEW_EVIDENCE_PRESENT in answer.warnings
     assert provider.calls == []
+
+
+def test_many_uncertain_candidates_are_summarized_per_test_page(
+    tmp_path: Path,
+) -> None:
+    page = _page(tmp_path, uuid4(), 1)
+    service, _ = _service(tmp_path, [])
+
+    answer = service.extract_paper(
+        _structure(page.paper_id, (page,), (_test_region(3, (1,)),)),
+        (page,),
+        (
+            _safety(
+                page,
+                3,
+                review_boxes=(
+                    BoundingBox(x=100, y=100, width=20, height=20),
+                    BoundingBox(x=500, y=400, width=25, height=18),
+                ),
+            ),
+        ),
+    ).answers[0]
+
+    assert answer.status is AnswerExtractionStatus.REVIEW_REQUIRED
+    assert len(answer.review_regions) == 1
+    assert answer.review_regions[0].bbox == BoundingBox(x=0, y=0, width=800, height=600)
+    assert answer.review_regions[0].reasons == (SafetyReason.UNCERTAIN_CLASSIFICATION,)
 
 
 def test_rejected_evidence_never_enters_answer(tmp_path: Path) -> None:

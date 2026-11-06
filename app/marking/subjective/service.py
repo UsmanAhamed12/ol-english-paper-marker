@@ -17,14 +17,14 @@ from app.marking.models import StudentEvidenceReference
 from app.marking.subjective.models import (
     ImprovementAdviceStatus,
     RubricEvidenceReference,
-    SyllabusEvidence,
-    SyllabusEvidenceReference,
     SubjectiveCriterionMarkResult,
     SubjectiveMarkingProvenance,
     SubjectiveMarkingStatus,
     SubjectiveMarkingWarning,
     SubjectivePaperMarkingResult,
     SubjectiveReasonCode,
+    SyllabusEvidence,
+    SyllabusEvidenceReference,
 )
 from app.marking.subjective.prompting import (
     SUBJECTIVE_PROMPT_VERSION,
@@ -43,8 +43,8 @@ from app.marking_scheme.models import (
     CriterionType,
     MarkingCriterion,
 )
-from app.vectorstore.base import KnowledgeBaseStore
 from app.syllabus.ingestion import SYLLABUS_SOURCE_ID
+from app.vectorstore.base import KnowledgeBaseStore
 
 SUBJECTIVE_SERVICE_VERSION = "subjective-marking-service-v2"
 SUBJECTIVE_TYPES = frozenset(
@@ -235,11 +235,15 @@ class SubjectiveMarkingService:
             warnings.append(SubjectiveMarkingWarning.SYLLABUS_EVIDENCE_UNAVAILABLE)
         elif advice_status is ImprovementAdviceStatus.SYLLABUS_RETRIEVAL_FAILED:
             warnings.append(SubjectiveMarkingWarning.SYLLABUS_RETRIEVAL_FAILED)
-        elif validated_result.advice_status is ImprovementAdviceStatus.INVALID_MODEL_TIPS:
+        elif (
+            validated_result.advice_status is ImprovementAdviceStatus.INVALID_MODEL_TIPS
+        ):
             warnings.append(SubjectiveMarkingWarning.IMPROVEMENT_TIPS_INVALID)
         if not syllabus_evidence:
             improvement_tips = ()
-        elif validated_result.advice_status is ImprovementAdviceStatus.INVALID_MODEL_TIPS:
+        elif (
+            validated_result.advice_status is ImprovementAdviceStatus.INVALID_MODEL_TIPS
+        ):
             advice_status = ImprovementAdviceStatus.INVALID_MODEL_TIPS
         else:
             advice_status = validated_result.advice_status
@@ -265,9 +269,7 @@ class SubjectiveMarkingService:
                 missing_requirements=validated.missing_requirements,
                 reason_codes=(reason, *validated.reason_codes),
                 feedback=validated.feedback,
-                syllabus_references=tuple(
-                    item.reference for item in syllabus_evidence
-                ),
+                syllabus_references=tuple(item.reference for item in syllabus_evidence),
                 improvement_advice_status=(
                     ImprovementAdviceStatus.REVIEW_REQUIRED
                     if syllabus_evidence
@@ -340,16 +342,26 @@ class SubjectiveMarkingService:
                 or metadata.get("source_id") != SYLLABUS_SOURCE_ID
             ):
                 continue
+            source_name = metadata.get("source_name")
+            source_sha256 = metadata.get("source_sha256")
+            page_number = metadata.get("page_number")
+            if (
+                not isinstance(source_name, str)
+                or not isinstance(source_sha256, str)
+                or not isinstance(page_number, int)
+                or isinstance(page_number, bool)
+            ):
+                raise KnowledgeBaseRetrievalError(
+                    "Retrieved syllabus evidence has invalid provenance"
+                )
             try:
                 reference = SyllabusEvidenceReference(
                     source_id=SYLLABUS_SOURCE_ID,
-                    source_name=metadata["source_name"],
-                    source_sha256=metadata["source_sha256"],
-                    page_number=metadata["page_number"],
+                    source_name=source_name,
+                    source_sha256=source_sha256,
+                    page_number=page_number,
                 )
-                evidence.append(
-                    SyllabusEvidence(text=result.text, reference=reference)
-                )
+                evidence.append(SyllabusEvidence(text=result.text, reference=reference))
             except (KeyError, ValidationError) as error:
                 raise KnowledgeBaseRetrievalError(
                     "Retrieved syllabus evidence has invalid provenance"

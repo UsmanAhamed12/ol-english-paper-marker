@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from pathlib import Path
+from shutil import which
 from statistics import fmean
 from time import perf_counter
 from typing import Protocol
@@ -56,6 +58,22 @@ class TesseractClient(Protocol):
 
 class PyTesseractClient:
     """Production adapter around the small pytesseract API surface in use."""
+
+    def __init__(self, executable: Path | None = None) -> None:
+        if executable is not None:
+            if not executable.is_file():
+                raise ConfigurationError(
+                    "Configured Tesseract executable does not exist"
+                )
+            pytesseract.pytesseract.tesseract_cmd = str(executable)
+        elif which("tesseract") is None:
+            for candidate in (
+                Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe"),
+                Path(r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"),
+            ):
+                if candidate.is_file():
+                    pytesseract.pytesseract.tesseract_cmd = str(candidate)
+                    break
 
     def version(self) -> str:
         """Resolve the local Tesseract executable version."""
@@ -133,10 +151,11 @@ class TesseractOCRProvider:
         language: str,
         psm: int,
         timeout_seconds: float,
+        executable: Path | None = None,
     ) -> TesseractOCRProvider:
         """Construct a provider whose version comes from the installed binary."""
 
-        client = PyTesseractClient()
+        client = PyTesseractClient(executable)
         return cls(
             client=client,
             language=language,

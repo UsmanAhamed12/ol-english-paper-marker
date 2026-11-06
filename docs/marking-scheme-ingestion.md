@@ -73,10 +73,16 @@ than being silently rearranged. No Test number is invented.
 The parser recognizes only explicit structures:
 
 - numbered or lettered answers;
+- consecutive parenthesized answer-key entries such as `(01) c (02) e`;
 - slash-separated accepted variants;
 - labeled accepted answers or keywords;
 - labeled content, language, format, or holistic criteria;
 - explicit `(1 mark)`, `[2 marks]`, or `Total: N marks` allocations.
+
+Consecutive numbered or lettered answer-key entries represent one objective
+item each and receive one mark per key. Isolated or unsequenced parenthetical
+text is not promoted into an answer key. Sample prose and unsupported
+subjective criteria remain `UNKNOWN` for examiner review.
 
 Unrecognized non-empty material is preserved as `UNKNOWN`. A Test maximum is
 the explicit total, or the sum only when every parsed criterion has an explicit
@@ -131,5 +137,39 @@ Phase 5A remains accepted with UNKNOWN/warning fallback. Phase 5B consumes the
 alignment contract for deterministic criteria, and Phase 5C consumes the same
 exact-number contract for guarded subjective criteria. `UNKNOWN` remains
 unsupported rather than being guessed.
+
+The parser has been smoke-tested against the supplied one-page answer-key
+layout. It separates parenthesized objective answer keys while preserving
+unstructured listening/writing material as unknown. This does not imply a
+complete paper maximum or replace review for omitted Tests.
 Phase 6 now constructs this ingestion service inside the production-local
 orchestration factory and preserves scheme warnings through final results.
+
+## Question-aware retrieval chunks
+
+Phase 8 adds `MarkingSchemeChunker`, a deterministic transformation from a
+`StructuredMarkingScheme` to framework-independent `KnowledgeDocument` records.
+Each parsed criterion becomes its own chunk, so exact `test_number` metadata
+can constrain later retrieval before semantic similarity is used. Chunks
+retain the scheme and source hashes, criterion ID and parser rule, source page,
+Test and criterion maximum marks when known, and the parser's accepted answers,
+keywords, or explicit component allocations. Parsed `UNKNOWN` criteria remain
+marked as unknown; chunking does not turn them into scoring rules.
+
+A Test with no parsed criteria produces one source-preserving Test summary
+chunk instead of being omitted. Chunk IDs are stable for the same scheme,
+Test, criterion, and chunker version. The chunker does not perform embedding,
+write to Chroma, or split rubric prose by arbitrary character limits; those
+responsibilities remain outside the chunker. Phase 9's
+`MarkingSchemeIndexingService` sends these records to the configured local
+`KnowledgeBaseStore`, which uses Ollama embeddings and the existing Chroma
+collection. To parse and index a private scheme PDF, run:
+
+```bash
+ollama pull nomic-embed-text
+uv run python -m scripts.ingest_marking_scheme /private/path/to/scheme.pdf --index
+```
+
+Without `--index`, the command retains its previous parse-and-save behavior
+and does not require the embedding model. Chunks preserve exact Test metadata;
+retrieving them for grading remains a later phase.

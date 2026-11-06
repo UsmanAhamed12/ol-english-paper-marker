@@ -126,6 +126,46 @@ def test_isolated_chromatic_teacher_risk_is_quarantined(tmp_path: Path) -> None:
     assert result.answer_regions == ()
 
 
+def test_uncertain_evidence_is_quarantined_instead_of_discarded(
+    tmp_path: Path,
+) -> None:
+    region = _region(
+        tmp_path,
+        BoundingBox(x=300, y=250, width=35, height=24),
+        feature_overrides={
+            "confidence": 0.4,
+            "regularity": 0.4,
+            "density": 0.05,
+        },
+    ).model_copy(update={"evidence_type": EvidenceType.UNKNOWN})
+
+    result = StudentCandidateSafetyFilter().apply(_test(region))
+
+    assert result.status is ExtractionStatus.REVIEW_REQUIRED
+    assert result.decisions[0].disposition is CandidateDisposition.REVIEW_REQUIRED
+    assert SafetyReason.UNCERTAIN_CLASSIFICATION in result.decisions[0].reasons
+    assert result.answer_regions == ()
+
+
+def test_teacher_classification_is_quarantined_for_review(tmp_path: Path) -> None:
+    region = _region(
+        tmp_path,
+        BoundingBox(x=300, y=250, width=35, height=24),
+        feature_overrides={
+            "confidence": 0.4,
+            "regularity": 0.4,
+            "density": 0.05,
+        },
+    ).model_copy(update={"evidence_type": EvidenceType.TEACHER_CANDIDATE})
+
+    result = StudentCandidateSafetyFilter().apply(_test(region))
+
+    assert result.status is ExtractionStatus.REVIEW_REQUIRED
+    assert result.decisions[0].disposition is CandidateDisposition.REVIEW_REQUIRED
+    assert SafetyReason.TEACHER_EVIDENCE_CLASSIFIED in result.decisions[0].reasons
+    assert result.answer_regions == ()
+
+
 def test_one_letter_answer_in_expected_space_is_preserved(tmp_path: Path) -> None:
     region = _region(
         tmp_path,

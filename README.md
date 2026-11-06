@@ -6,7 +6,8 @@ evaluation as primary engineering goals.
 
 ## Current status
 
-**Phase 7 - local Streamlit FYP demonstration application implemented.**
+**Phase 21 in progress - one-paper failure analysis recorded; calibration and
+40-paper evaluation remain unverified.**
 
 The repository currently provides:
 
@@ -41,6 +42,9 @@ The repository currently provides:
 - a separate typed marking-scheme boundary with conservative Test/criterion
   parsing, explicit UNKNOWN/warning states, source provenance, and exact-number
   alignment to structured student answers.
+- deterministic, criterion-scoped marking-scheme chunks with exact Test
+  metadata, stable identifiers, source provenance, and a source-preserving
+  fallback for Tests without parsed criteria.
 - a deterministic Decimal-safe marking engine for exact answers, accepted
   variants, token/phrase keywords, and explicitly allocated multi-part
   criteria, with confirmed and unresolved marks kept separate.
@@ -54,9 +58,38 @@ The repository currently provides:
   confirmed/final score semantics, Test and criterion breakdowns, feedback,
   review queue, deterministic JSON download, and an explicitly synthetic demo
   mode for presentation QA.
+- question-level formative feedback and up to three improvement tips from the
+  configured local Ollama model, grounded only in extracted answer text and
+  recognized scheme criteria; this advice never contributes to marks.
+- a normalized score out of 100 only when every required mark is resolved,
+  shown alongside the original scheme score; unresolved papers do not receive
+  a definitive normalized score.
 - provenance-tagged syllabus extraction and chunking, Ollama embeddings,
   persistent Chroma storage, and metadata-filtered retrieval; see
   [docs/rag.md](docs/rag.md).
+- exact-Test marking-scheme retrieval with scheme, criterion, and source-page
+  provenance validation.
+- a centralized `ChatOllama` factory for deterministic local JSON grading with
+  loopback-only endpoint validation.
+- Decimal-safe objective and subjective aggregation that enforces known Test
+  and paper maxima and withholds final scores while marks remain unresolved.
+- a compiled LangGraph path from input validation through marking aggregation,
+  with conditional completion/review status routing; see
+  [docs/langgraph.md](docs/langgraph.md).
+- optional PostgreSQL-backed checkpointing with run-UUID thread IDs and an
+  explicit connection lifetime; graph persistence is not yet wired into the
+  CLI or Streamlit entry points.
+- interrupt/resume human review for unresolved criteria with bounded
+  teacher-awarded marks and recalculated combined results; the review UI is
+  deferred to the Streamlit integration phase.
+- a held-out evaluation boundary with frozen human-reference datasets,
+  prediction-only runs, mark metrics, coverage accounting, and deterministic
+  aggregate reports; see [docs/evaluation.md](docs/evaluation.md).
+- a synthetic one-paper graph test that pauses at human review, resumes with a
+  teacher decision, and verifies the final result; it uses an in-memory
+  checkpointer and does not claim real-PDF or OCR validation.
+- a viva runbook that separates synthetic UI presentation from real local
+  pipeline smoke results; see [docs/viva-demo.md](docs/viva-demo.md).
 
 Plain Tesseract has been measured as a fast layout/printed-text baseline; it is
 not selected as a handwriting solution. Four fixed preprocessing variants were
@@ -110,12 +143,20 @@ separate, missing Tests are never invented, and failures are isolated. Because
 the historical corpus contains teacher marks, its private smoke outputs are
 forced to `REVIEW_REQUIRED` even when OCR succeeds. See
 `docs/student-answer-extraction.md`.
-Syllabus indexing and a Chroma retrieval boundary are implemented, but
-retrieval is not yet connected to grading prompts. LangGraph and PostgreSQL
-remain planned for later phases. The orchestration, subjective, and Streamlit
-paths are implemented for an FYP prototype; real marking accuracy has not yet
-been evaluated and no official marking-scheme PDF is currently available for a
-real end-to-end smoke.
+Syllabus indexing and a Chroma retrieval boundary are implemented. Parsed
+marking-scheme chunks can also be embedded and indexed in the local collection;
+question-aware retrieval is not yet connected to grading prompts. PostgreSQL
+checkpoint support and LangGraph orchestration are implemented, but checkpoint
+persistence is not wired into the CLI or Streamlit entry points. The
+orchestration, subjective, and Streamlit paths are implemented for an FYP
+prototype. The historical evaluation framework is implemented, but no real
+marking accuracy has been measured. One private unmarked paper and scheme are
+available under ignored `data/test/`; the real local smoke withheld a final
+score because all 69 known marks remained unresolved. The 40-paper evaluation
+still requires safe input pairs and separately verified teacher references.
+The Phase 21 diagnostic identified extraction review, missing structure, and
+unsupported parsed criteria as blockers; no confidence or grading calibration
+was made without reference marks.
 
 ## FYP demo quick start
 
@@ -123,10 +164,16 @@ real end-to-end smoke.
 2. Start local Ollama and verify the model configured by
    `OLLAMA_GRADING_MODEL` is installed.
 3. Verify Tesseract is installed with `tesseract --version`.
-4. Launch the UI:
+4. Launch the UI. On Windows, use the project launcher:
+
+   ```powershell
+   .\run_app.ps1
+   ```
+
+   On other platforms:
 
    ```bash
-   uv run streamlit run streamlit_app.py
+   uv run python -m streamlit run streamlit_app.py
    ```
 
 5. Upload one student answer PDF and its corresponding official marking scheme.

@@ -28,4 +28,4 @@ def percentage(confirmed: Decimal, maximum: Decimal) -> str | None:
     if maximum <= 0:
         return None
     value = (confirmed / maximum) * Decimal("100")
-    return f"{value.quantize(Decimal('0.1'))}%"
+    return f"{value.quantize(Decimal('0.01'))}%"

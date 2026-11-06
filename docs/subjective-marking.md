@@ -25,21 +25,25 @@ DeterministicMarkingEngine + SubjectiveMarkingService
 ```
 
 The provider Protocol keeps unit tests offline and allows later replacement.
-`OllamaSubjectiveMarkingProvider` reuses the existing loopback-only HTTP client,
-rejects cloud model tags, uses temperature 0 and seed 0, and preserves the exact
-raw response. The request timeout is configured with
-`OLLAMA_GRADING_TIMEOUT_SECONDS` (default 300 seconds).
+`app.llm.factory` constructs the maintained `langchain_ollama.ChatOllama`
+integration with the configured loopback endpoint, JSON mode, temperature 0,
+seed 0, a bounded output length, and the configured request timeout.
+`OllamaSubjectiveMarkingProvider` preserves the exact raw response and maps
+local transport failures to sanitized domain errors. Shared Ollama validation
+rejects remote endpoints and cloud model tags.
 
 ## Rubric-first prompt
 
-The controlled prompt is `prompts/grading/subjective-v1.txt`, versioned as
-`subjective-marking-v1`. It separates an authoritative criterion JSON object
+The controlled prompt is `prompts/grading/subjective-v2.txt`, versioned as
+`subjective-marking-v2`. It separates an authoritative criterion JSON object
 from untrusted student evidence JSON. It instructs the model to apply only that
 criterion, respect its maximum, distinguish OCR uncertainty from student error,
 and return one specified JSON object. Student instructions are explicitly data,
 not commands; the model must not follow prompt injection embedded in an answer.
 
-No correction, rewriting, semantic search, RAG, LangChain, or LangGraph occurs.
+LangChain is used only as the local chat integration. This path does not correct
+or rewrite student answers, retrieve rubric material, or run an autonomous
+chain or LangGraph workflow.
 
 ## Validation and score safety
 
@@ -111,6 +115,12 @@ routed to `REVIEW_REQUIRED` for low model confidence; none became a confirmed
 mark, none violated a mark cap, and total sequential provider time was about
 31 seconds. This demonstrates the local integration and guardrail behavior,
 not subjective marking accuracy.
+
+Phase 11 validated the LangChain `ChatOllama` path with `llama2:latest` using
+the same four synthetic criteria. All four responses passed structural
+validation and were accepted as marks, with zero provider failures or mark-cap
+violations; total sequential inference time was about 608 seconds. This is an
+integration smoke only and is not evidence of marking accuracy.
 
 ## Privacy and limitations
 

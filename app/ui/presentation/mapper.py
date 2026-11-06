@@ -66,7 +66,9 @@ _STAGE_LABELS = {
     "test_alignment": "Aligning Tests",
     "objective_marking": "Marking objective answers",
     "subjective_marking": "Marking descriptive answers",
+    "formative_feedback": "Generating local learning feedback",
     "result_aggregation": "Preparing final result",
+    "human_review": "Reviewing marks",
 }
 
 
@@ -81,21 +83,43 @@ def map_final_result(
         and result.unresolved_marks == 0
     )
     status, tone = _status(result.status)
-    score_heading = "Final score" if is_final else "Confirmed marks"
-    score_value = (
-        f"{format_marks(result.final_score)} / "
-        f"{format_marks(result.known_maximum_marks)}"
+    normalized_percentage = (
+        percentage(result.final_score, result.known_maximum_marks)
         if is_final and result.final_score is not None
+        else None
+    )
+    normalized_value = (
+        normalized_percentage.removesuffix("%")
+        if normalized_percentage is not None
+        else None
+    )
+    score_heading = "Normalized score out of 100" if is_final else "Confirmed marks"
+    score_value = (
+        f"{normalized_value} / 100"
+        if normalized_value is not None
         else (
             f"{format_marks(result.total_confirmed_marks)} of "
             f"{format_marks(result.known_maximum_marks)} known marks"
         )
     )
+    raw_score_value = (
+        f"{format_marks(result.final_score)} / "
+        f"{format_marks(result.known_maximum_marks)}"
+        if is_final and result.final_score is not None
+        else None
+    )
     feedback_by_test: dict[int, list[str]] = defaultdict(list)
     for item in result.feedback:
         feedback_by_test[item.test_number].append(item.feedback)
+    formative_feedback_by_test = {
+        item.test_number: item for item in result.question_feedback
+    }
     tests = tuple(
-        _map_test(test, tuple(feedback_by_test.get(test.test_number, ())))
+        _map_test(
+            test,
+            tuple(feedback_by_test.get(test.test_number, ())),
+            formative_feedback_by_test.get(test.test_number),
+        )
         for test in result.test_results
     )
     warnings = tuple(
@@ -114,11 +138,8 @@ def map_final_result(
         tone=tone,
         score_heading=score_heading,
         score_value=score_value,
-        percentage=(
-            percentage(result.final_score, result.known_maximum_marks)
-            if is_final and result.final_score is not None
-            else None
-        ),
+        raw_score_value=raw_score_value,
+        percentage=normalized_percentage,
         unresolved_value=(
             None if is_final else f"{format_marks(result.unresolved_marks)} marks"
         ),
@@ -172,11 +193,21 @@ def map_final_result(
     )
 
 
-def _map_test(test: object, feedback: tuple[str, ...]) -> TestResultView:
+def _map_test(
+    test: object,
+    feedback: tuple[str, ...],
+    formative_feedback: object | None,
+) -> TestResultView:
     from app.marking.subjective.models import CombinedTestMarkResult
 
     if not isinstance(test, CombinedTestMarkResult):
         raise TypeError("Unexpected Test result")
+    from app.feedback.models import QuestionFeedback
+
+    if formative_feedback is not None and not isinstance(
+        formative_feedback, QuestionFeedback
+    ):
+        raise TypeError("Unexpected formative feedback result")
     unresolved = test.unresolved_marks + test.unsupported_marks
     status = "Resolved" if test.final_score is not None else "Review required"
     heading = f"Test {test.test_number:02d} — " + (
@@ -211,6 +242,17 @@ def _map_test(test: object, feedback: tuple[str, ...]) -> TestResultView:
         subjective_marks=format_marks(test.confirmed_subjective_marks),
         criteria=criteria,
         feedback=feedback,
+        formative_feedback=(
+            formative_feedback.feedback if formative_feedback is not None else None
+        ),
+        improvement_tips=(
+            formative_feedback.improvement_tips
+            if formative_feedback is not None
+            else ()
+        ),
+        formative_feedback_status=(
+            formative_feedback.status.value if formative_feedback is not None else None
+        ),
         warnings=tuple(
             WarningView(code=code, message=humanize_code(code))
             for code in dict.fromkeys(warning_codes)

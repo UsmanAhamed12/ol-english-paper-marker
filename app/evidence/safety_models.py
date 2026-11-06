@@ -23,6 +23,8 @@ class CandidateDisposition(StrEnum):
 class SafetyReason(StrEnum):
     """Stable, explainable reasons emitted by the safety filter."""
 
+    UNCERTAIN_CLASSIFICATION = "uncertain_classification"
+    TEACHER_EVIDENCE_CLASSIFIED = "teacher_evidence_classified"
     V1_NON_STUDENT = "v1_non_student"
     STUDENT_SIGNALS_PRESERVED = "student_signals_preserved"
     PRINTED_REGULAR_TEXT = "printed_regular_text"

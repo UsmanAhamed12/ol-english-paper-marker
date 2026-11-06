@@ -170,9 +170,9 @@ class SubjectiveCriterionMarkResult(BaseModel):
     missing_requirements: tuple[str, ...] = ()
     reason_codes: Annotated[tuple[SubjectiveReasonCode | str, ...], Field(min_length=1)]
     feedback: str = ""
-    improvement_tips: tuple[Annotated[str, Field(min_length=1, max_length=300)], ...] = (
-        ()
-    )
+    improvement_tips: tuple[
+        Annotated[str, Field(min_length=1, max_length=300)], ...
+    ] = ()
     syllabus_references: tuple[SyllabusEvidenceReference, ...] = ()
     improvement_advice_status: ImprovementAdviceStatus = (
         ImprovementAdviceStatus.NOT_GENERATED

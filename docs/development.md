@@ -231,7 +231,7 @@ student answer, rubric, or raw model response.
 Launch the Phase 7 local UI with:
 
 ```bash
-uv run streamlit run streamlit_app.py
+uv run python -m streamlit run streamlit_app.py
 ```
 
 Real runs require local Tesseract, a running configured Ollama model, and a
@@ -239,7 +239,7 @@ corresponding official scheme. For presentation QA only, enable the visibly
 labeled synthetic scenarios with:
 
 ```bash
-UI_DEMO_ENABLED=true uv run streamlit run streamlit_app.py
+UI_DEMO_ENABLED=true uv run python -m streamlit run streamlit_app.py
 ```
 
 Never enable synthetic demo mode as a fallback for a real processing error.

@@ -101,19 +101,32 @@ class StudentExtractionService:
         available_pages = {item.page_number for item in safety}
         incomplete = set(expected_pages) != available_pages
         ordered_safety = tuple(sorted(safety, key=lambda item: item.page_number))
-        review_regions = tuple(
-            ReviewEvidenceRegion(
-                paper_id=decision.evidence.paper_id,
-                test_number=decision.evidence.test_number,
-                page_number=decision.evidence.page_number,
-                bbox=decision.evidence.bbox,
-                reasons=decision.reasons,
-                source_image_path=decision.evidence.source_image_path,
+        review_region_items: list[ReviewEvidenceRegion] = []
+        for item in ordered_safety:
+            review_decisions = tuple(
+                decision
+                for decision in item.decisions
+                if decision.disposition is CandidateDisposition.REVIEW_REQUIRED
             )
-            for item in ordered_safety
-            for decision in item.decisions
-            if decision.disposition is CandidateDisposition.REVIEW_REQUIRED
-        )
+            if not review_decisions:
+                continue
+            review_region_items.append(
+                ReviewEvidenceRegion(
+                    paper_id=item.paper_id,
+                    test_number=item.test_number,
+                    page_number=item.page_number,
+                    bbox=item.region_bbox,
+                    reasons=tuple(
+                        dict.fromkeys(
+                            reason
+                            for decision in review_decisions
+                            for reason in decision.reasons
+                        )
+                    ),
+                    source_image_path=review_decisions[0].evidence.source_image_path,
+                )
+            )
+        review_regions = tuple(review_region_items)
         answer_regions = order_answer_regions(
             tuple(region for item in ordered_safety for region in item.answer_regions)
         )

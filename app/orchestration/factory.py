@@ -7,9 +7,11 @@ from app.evidence.answer_regions import AnswerRegionDetector
 from app.evidence.safety_filter import StudentCandidateSafetyFilter
 from app.evidence.separator import EvidenceSeparator
 from app.evidence.service import EvidenceSeparationService
+from app.feedback.service import PaperFeedbackService
 from app.ingestion.pdf_loader import PDFLoader
 from app.ingestion.pdf_renderer import PDFRenderer
 from app.ingestion.validators import PDFValidator
+from app.llm.factory import create_grading_chat_model
 from app.marking.subjective.combined import CombinedMarkingService
 from app.marking.subjective.ollama import OllamaSubjectiveMarkingProvider
 from app.marking.subjective.service import SubjectiveMarkingService
@@ -17,7 +19,6 @@ from app.marking_scheme.alignment import TestAlignmentService
 from app.marking_scheme.ingestion import MarkingSchemeIngestionService
 from app.marking_scheme.parser import MarkingSchemeParser
 from app.ocr.normalizer import OCRNormalizer
-from app.ocr.providers.ollama import OllamaHTTPClient
 from app.ocr.providers.tesseract import TesseractOCRProvider
 from app.ocr.service import OCRService
 from app.orchestration.pipeline import (
@@ -44,6 +45,7 @@ def create_local_paper_marking_service(
         language=settings.tesseract_language,
         psm=settings.tesseract_psm,
         timeout_seconds=settings.tesseract_timeout_seconds,
+        executable=settings.tesseract_executable,
     )
     page_ocr = OCRService(tesseract, OCRNormalizer())
     runtime_root = settings.runtime_data_dir / "paper-marking"
@@ -72,15 +74,12 @@ def create_local_paper_marking_service(
             MarkingSchemeParser(),
         ),
     )
-    ollama_client = OllamaHTTPClient(
-        base_url=str(settings.ollama_base_url),
-        timeout_seconds=settings.ollama_grading_timeout_seconds,
+    ollama_provider = OllamaSubjectiveMarkingProvider(
+        chat_model=create_grading_chat_model(settings),
+        model=settings.ollama_grading_model,
     )
     subjective = SubjectiveMarkingService(
-        OllamaSubjectiveMarkingProvider(
-            client=ollama_client,
-            model=settings.ollama_grading_model,
-        ),
+        ollama_provider,
         grading_confidence_threshold=settings.grading_confidence_threshold,
         ocr_confidence_threshold=settings.ocr_confidence_threshold,
         syllabus_store=ChromaKnowledgeBaseStore.from_settings(settings),
@@ -93,4 +92,8 @@ def create_local_paper_marking_service(
         alignment_service=TestAlignmentService(),
         combined_marking_service=CombinedMarkingService(subjective),
         private_output_root=settings.runtime_data_dir,
+        formative_feedback_service=PaperFeedbackService(
+            ollama_provider,
+            ocr_confidence_threshold=settings.ocr_confidence_threshold,
+        ),
     )

@@ -5,9 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Protocol
 
-from app.vectorstore.models import KnowledgeDocument, KnowledgeSearchResult
+from app.vectorstore.models import (
+    KnowledgeDocument,
+    KnowledgeSearchResult,
+    MetadataValue,
+)
 
-MetadataFilter = Mapping[str, str]
+MetadataFilter = Mapping[str, MetadataValue]
 
 
 class KnowledgeBaseStore(Protocol):

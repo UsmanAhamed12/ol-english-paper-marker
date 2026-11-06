@@ -23,6 +23,7 @@ htmlcov/
 
 # Sensitive historical examination data
 data/raw/
+/data/test/
 
 # Generated and runtime data
 data/processed/
@@ -31,3 +32,4 @@ data/runtime/
 data/chroma/
 chroma/
 .chroma/
+.env

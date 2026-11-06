@@ -70,8 +70,7 @@ def render_test_results(view: ResultViewModel) -> None:
                     }[criterion.improvement_advice_status]
                     st.caption(status_message)
                 elif (
-                    criterion.improvement_advice_status
-                    == "no_improvements_identified"
+                    criterion.improvement_advice_status == "no_improvements_identified"
                 ):
                     st.caption(
                         "No additional improvement tip was supported by the "
@@ -82,6 +81,26 @@ def render_test_results(view: ResultViewModel) -> None:
                 st.markdown("**Feedback**")
                 for feedback in test.feedback:
                     st.write(feedback)
+            if test.formative_feedback is not None:
+                st.markdown("**Local Ollama learning feedback**")
+                st.caption(
+                    "Educational guidance only; it does not award or change marks."
+                )
+                if test.formative_feedback_status == "provisional":
+                    st.warning(
+                        "Provisional feedback: verify the OCR transcription before "
+                        "relying on this advice."
+                    )
+                st.write(test.formative_feedback)
+                if test.improvement_tips:
+                    st.markdown("**Improvement tips**")
+                    for tip in test.improvement_tips:
+                        st.write(f"- {tip}")
+            elif test.formative_feedback_status in {"failed", "skipped"}:
+                st.caption(
+                    "Local learning feedback unavailable for this Test "
+                    f"({test.formative_feedback_status})."
+                )
             if test.warnings:
                 with st.expander("Test warnings"):
                     for warning in test.warnings:

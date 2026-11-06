@@ -15,7 +15,8 @@ from app.structure.models import (
 )
 
 _KEYWORD = "test"
-_KNOWN_KEYWORD_CONFUSIONS = {"lest", "tesl", "tost"}
+_KNOWN_KEYWORD_CONFUSIONS = {"lest", "tesl", "tost", "vest"}
+_HEADING_PREFIX_WORDS = {"a", "an", "is", "the", "this", "that", "one", "our"}
 _NUMBER_CONFUSIONS = str.maketrans({"o": "0", "O": "0", "l": "1", "I": "1"})
 
 
@@ -116,14 +117,7 @@ def _candidate_from_line(
 ) -> TestMarkerCandidate | None:
     if not line:
         return None
-    marker_start = next(
-        (
-            index
-            for index, item in enumerate(line[:2])
-            if any(character.isalnum() for character in item.word.text)
-        ),
-        None,
-    )
+    marker_start = _find_marker_start(line)
     if marker_start is None:
         return None
     first = line[marker_start]
@@ -173,7 +167,7 @@ def _candidate_from_line(
         + 0.2 * (ocr_confidence if ocr_confidence is not None else 0.5)
         + 0.25 * geometry_confidence
     )
-    if len(line) > marker_start + 4:
+    if marker_start == 0 and len(line) > marker_start + 4:
         confidence *= 0.65
     if marker_words[0].word.bbox.y >= page.height * 0.92:
         confidence *= 0.55
@@ -190,6 +184,26 @@ def _candidate_from_line(
         strategy=strategy,
         source_word_indices=tuple(item.index for item in marker_words),
     )
+
+
+def _find_marker_start(line: tuple[_IndexedWord, ...]) -> int | None:
+    """Find a Test label after OCR punctuation while rejecting prose prefixes."""
+
+    for index, item in enumerate(line[:3]):
+        keyword = _letters(item.word.text)
+        if _keyword_similarity(keyword) < 0.75:
+            continue
+        prefix = line[:index]
+        if any(len(_letters(word.word.text)) >= 3 for word in prefix):
+            continue
+        if any(
+            _letters(word.word.text) in _HEADING_PREFIX_WORDS
+            and (word.word.confidence or 0.0) >= 0.5
+            for word in prefix
+        ):
+            continue
+        return index
+    return None
 
 
 def _group_lines(words: tuple[OCRWord, ...]) -> tuple[tuple[_IndexedWord, ...], ...]:

@@ -76,6 +76,9 @@ class TestResultView(BaseModel):
     subjective_marks: str
     criteria: tuple[CriterionView, ...]
     feedback: tuple[str, ...]
+    formative_feedback: str | None
+    improvement_tips: tuple[str, ...]
+    formative_feedback_status: str | None
     warnings: tuple[WarningView, ...]
 
 
@@ -99,6 +102,7 @@ class ResultViewModel(BaseModel):
     tone: ViewTone
     score_heading: str
     score_value: str
+    raw_score_value: str | None
     percentage: str | None
     unresolved_value: str | None
     is_final_score: bool

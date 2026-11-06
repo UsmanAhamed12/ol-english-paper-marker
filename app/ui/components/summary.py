@@ -24,8 +24,10 @@ def render_summary(view: ResultViewModel) -> None:
     else:
         st.warning(message)
     details: list[str] = [f"Status: **{view.status}**"]
+    if view.raw_score_value is not None:
+        details.append(f"Raw scheme score: **{view.raw_score_value}**")
     if view.percentage is not None:
-        details.append(f"Percentage: **{view.percentage}**")
+        details.append(f"Normalized: **{view.percentage}**")
     if view.unresolved_value is not None:
         details.append(f"Unresolved: **{view.unresolved_value}**")
     st.markdown(" · ".join(details))

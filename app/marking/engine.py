@@ -59,7 +59,19 @@ class DeterministicMarkingEngine:
         tests = tuple(self.mark_test(item) for item in aligned.tests)
         confirmed = sum((item.awarded_marks for item in tests), Decimal("0"))
         maximum = sum(
-            (item.maximum_marks for item in tests if item.maximum_marks is not None),
+            (
+                item.maximum_marks
+                if item.maximum_marks is not None
+                else sum(
+                    (
+                        criterion.maximum_marks
+                        for criterion in item.criterion_results
+                        if criterion.maximum_marks is not None
+                    ),
+                    Decimal("0"),
+                )
+                for item in tests
+            ),
             Decimal("0"),
         )
         if confirmed > maximum:
@@ -171,6 +183,24 @@ class DeterministicMarkingEngine:
         criterion: MarkingCriterion,
     ) -> CriterionMarkResult:
         evidence = _student_reference(answer)
+        if answer.status is AnswerExtractionStatus.REVIEW_REQUIRED:
+            return self._review_criterion(answer, criterion)
+        if answer.status is AnswerExtractionStatus.OCR_FAILED:
+            return _unresolved_criterion(
+                criterion,
+                answer,
+                MarkingStatus.OCR_FAILED,
+                MarkingReasonCode.STUDENT_OCR_FAILED,
+                MarkingWarning.OCR_EVIDENCE_UNAVAILABLE,
+            )
+        if answer.status is AnswerExtractionStatus.STRUCTURE_INCOMPLETE:
+            return _unresolved_criterion(
+                criterion,
+                answer,
+                MarkingStatus.STRUCTURE_INCOMPLETE,
+                MarkingReasonCode.STUDENT_STRUCTURE_INCOMPLETE,
+                MarkingWarning.STRUCTURE_EVIDENCE_INCOMPLETE,
+            )
         if criterion.criterion_type in _SUBJECTIVE or (
             criterion.criterion_type is CriterionType.UNKNOWN
         ):

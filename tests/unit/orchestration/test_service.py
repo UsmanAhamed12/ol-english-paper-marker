@@ -8,6 +8,8 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.types import Command
 
 from app.answers.models import (
     AnswerExtractionProvenance,
@@ -24,6 +26,8 @@ from app.core.exceptions import (
     MarkingSchemeIngestionError,
     OrchestrationError,
 )
+from app.graph.builder import build_marking_graph
+from app.graph.checkpoints import graph_config_for_run
 from app.marking.subjective.combined import CombinedMarkingService
 from app.marking.subjective.models import SubjectiveMarkingStatus
 from app.marking.subjective.provider import SubjectiveProviderResponse
@@ -429,6 +433,90 @@ def test_complete_synthetic_orchestration_preserves_every_boundary() -> None:
         "subjective_provider",
         "subjective_prompt",
     } <= components
+
+
+def test_one_paper_graph_e2e_pauses_for_review_then_completes() -> None:
+    student, scheme = _scenario()
+    student_for_review = _student_paper(
+        (
+            *student.answers[:3],
+            _answer(
+                4,
+                "Synthetic content answer requiring teacher review.",
+                AnswerExtractionStatus.REVIEW_REQUIRED,
+            ),
+            student.answers[4],
+        )
+    )
+    scheme_for_review = _scheme(tuple(test.criteria[0] for test in scheme.tests[:5]))
+    provider = FakeSubjectiveProvider()
+    validator = FakeValidator()
+    student_pipeline = FakeStudentPipeline(student_for_review)
+    scheme_pipeline = FakeSchemePipeline(scheme_for_review)
+    marking = CombinedMarkingService(SubjectiveMarkingService(provider))
+    run_id = UUID("c0000000-0000-0000-0000-00000000000c")
+    graph = build_marking_graph(
+        input_validator=validator,
+        student_pipeline=student_pipeline,
+        scheme_pipeline=scheme_pipeline,
+        alignment=TestAlignmentService(),
+        marking=marking,
+        checkpointer=InMemorySaver(),
+    )
+    config = graph_config_for_run(run_id)
+
+    paused = graph.invoke(
+        {
+            "run_id": str(run_id),
+            "student_pdf_path": "synthetic-student.pdf",
+            "marking_scheme_pdf_path": "synthetic-scheme.pdf",
+        },
+        config=config,
+    )
+
+    assert len(paused["__interrupt__"]) == 1
+    review_items = paused["__interrupt__"][0].value["items"]
+    assert len(review_items) == 1
+    assert review_items[0]["criterion_id"] == "test-04-criterion-001"
+    assert review_items[0]["student_answer"] == (
+        "Synthetic content answer requiring teacher review."
+    )
+    assert review_items[0]["maximum_marks"] == "3"
+
+    completed = graph.invoke(
+        Command(
+            resume={
+                "reviewer_id": "synthetic-reviewer",
+                "decisions": [
+                    {
+                        "test_number": 4,
+                        "criterion_id": "test-04-criterion-001",
+                        "awarded_marks": "2",
+                        "rationale": "Content is relevant with incomplete detail.",
+                    }
+                ],
+            }
+        ),
+        config=config,
+    )
+
+    combined = completed["combined_result"]
+    assert combined.final_score == Decimal("9")
+    assert combined.confirmed_marks == Decimal("9")
+    assert combined.review_required_marks == 0
+    assert completed["workflow_status"] is FinalPaperStatus.COMPLETED
+    assert completed["review_required"] is False
+    assert completed["human_review_response"].reviewer_id == "synthetic-reviewer"
+    assert completed["current_stage"] is PipelineStage.HUMAN_REVIEW
+    assert len(completed["objective_result"].test_results) == 5
+    assert len(completed["subjective_result"].criterion_results) == 2
+    assert validator.paths == [
+        Path("synthetic-student.pdf"),
+        Path("synthetic-scheme.pdf"),
+    ]
+    assert student_pipeline.calls == scheme_pipeline.calls == 1
+    assert provider.calls == 1
+    assert graph.get_state(config).values["combined_result"] == combined
 
 
 def test_criterion_ownership_prevents_double_counting() -> None:

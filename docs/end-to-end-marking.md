@@ -91,9 +91,22 @@ marks.
 ## Feedback and review queue
 
 Criterion feedback from Phase 5C is aggregated deterministically; no extra LLM
-summary call is made. Each `ReviewItem` identifies the Test, optional criterion,
-safe reason/status, possible marks affected, and a safe source reference. This
-is ready for the Phase 7 presentation layer.
+summary call is made. A separate `PaperFeedbackService` can use the configured
+local Ollama provider for Test-level educational feedback and improvement tips.
+It receives extracted answer text and recognized scheme criteria only; its
+strict response contract has no mark fields, and the output is never used by
+marking or aggregation. Feedback is skipped when answer evidence or recognized
+criteria are unavailable and is labeled provisional when extraction needs
+review.
+
+Each `ReviewItem` identifies the Test, optional criterion, safe reason/status,
+possible marks affected, and a safe source reference. The presentation layer
+shows formative advice separately from criterion feedback.
+
+A normalized score out of 100 is displayed only for a completed result with no
+unresolved marks. The original awarded/known scheme score remains visible.
+Normalization does not establish that the official exam itself is out of 100;
+partial and review-required outcomes have no definitive normalized score.
 
 ## CLI
 
@@ -124,10 +137,21 @@ It confirms objective/subjective ownership, review propagation, feedback,
 timing, provenance, serialization, and failure isolation without Ollama,
 Tesseract, or private PDFs.
 
-No official marking-scheme PDF is currently present in private repository
-storage. Therefore a real student-plus-scheme end-to-end smoke was not
-fabricated. This is a real-data availability limitation, not a core integration
-failure.
+Phase 18 additionally tests one synthetic paper through the compiled
+LangGraph. It uses the real alignment and combined-marking services with
+in-memory checkpointing, pauses for a bounded teacher decision, resumes the
+same run, and verifies the completed score and checkpointed state. PDF
+validation and extraction pipeline outputs, and the subjective provider, are
+synthetic in this test; it does not validate real PDF rendering, OCR, or
+marking accuracy.
+
+One private unmarked student paper and its marking scheme are now available
+under ignored `data/test/`. A real CLI smoke completed against that pair using
+local Tesseract and Ollama. It aligned 12 Tests but conservatively confirmed no
+marks, left 69 marks unresolved, produced 88 review items, and withheld the
+final score. This demonstrates that the local real-input path executes, not
+that OCR or marking is accurate. The single paper has no separate verified
+teacher-score reference, so it cannot produce evaluation metrics.
 
 ## Privacy and limitations
 
@@ -136,6 +160,9 @@ not included in logs or CLI summaries. Full results may contain private student
 evidence and therefore remain under ignored runtime storage.
 
 Subjective marking accuracy remains unmeasured. OCR/evidence limitations and
-review fallbacks remain. Sequential local inference may be slow on the M1. The
-next accepted phase is the Streamlit FYP application, not another pipeline
-redesign.
+review fallbacks remain. Sequential local inference may be slow on the M1.
+The historical evaluation framework is implemented, but Phase 20 still
+requires 40 safe student-paper/scheme pairs and separately verified
+teacher-reference marks. Historical teacher-annotated PDFs must not be used as
+model inputs. Neither the synthetic graph test nor the one-paper smoke is
+evidence of grading accuracy.

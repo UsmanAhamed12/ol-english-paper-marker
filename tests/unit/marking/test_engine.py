@@ -385,6 +385,32 @@ def test_ocr_failure_is_not_a_zero_mark() -> None:
 
 
 @pytest.mark.parametrize(
+    ("answer_status", "expected_status"),
+    [
+        (AnswerExtractionStatus.OCR_FAILED, MarkingStatus.OCR_FAILED),
+        (
+            AnswerExtractionStatus.STRUCTURE_INCOMPLETE,
+            MarkingStatus.STRUCTURE_INCOMPLETE,
+        ),
+    ],
+)
+def test_answer_failure_status_blocks_marking_when_alignment_is_stale(
+    answer_status: AnswerExtractionStatus,
+    expected_status: MarkingStatus,
+) -> None:
+    aligned = _aligned(
+        (_criterion(CriterionType.EXACT_ANSWER, accepted=("yes",)),),
+        answer=_answer("yes", answer_status),
+    )
+
+    result = DeterministicMarkingEngine().mark_test(aligned)
+
+    assert result.status is expected_status
+    assert result.criterion_results[0].awarded_marks is None
+    assert result.review_required_marks == 1
+
+
+@pytest.mark.parametrize(
     "criterion_type",
     [
         CriterionType.CONTENT_POINT,
@@ -545,6 +571,26 @@ def test_partially_marked_paper_preserves_confirmed_and_unresolved() -> None:
     assert result.unsupported_marks == 2
     assert result.tests_unsupported == (1,)
     assert MarkingWarning.PAPER_PARTIALLY_MARKED in result.warnings
+
+
+def test_paper_maximum_includes_explicit_criteria_when_test_total_is_unknown() -> None:
+    criteria = (
+        _criterion(CriterionType.EXACT_ANSWER, accepted=("yes",), index=1),
+        _criterion(CriterionType.UNKNOWN, maximum=None, index=2),
+    )
+
+    result = DeterministicMarkingEngine().mark_paper(
+        _paper(
+            _aligned(
+                criteria,
+                answer=_answer("", AnswerExtractionStatus.REVIEW_REQUIRED),
+            )
+        )
+    )
+
+    assert result.maximum_known_marks == 1
+    assert result.review_required_marks == 1
+    assert result.confirmed_marks == 0
 
 
 def test_unallocated_test_marks_remain_review_required() -> None:

@@ -37,12 +37,16 @@ The policy was written before its single benchmark run and was not retuned.
 - Reject dense, high-confidence, regular achromatic OCR evidence that strongly
   resembles print.
 - Reject tiny visual-only components outside an existing writing-guide context.
+- Quarantine evidence classified as unknown or teacher-originated rather than
+  treating uncertain classification as proof that no student response exists.
 - Quarantine isolated chromatic candidates, red-dominant candidates, small
   isolated margin/score risks, and overlapping correction-stroke risks.
 - Preserve one-character or numeric OCR candidates when they have plausible
   geometry, especially inside an existing answer-space context.
 - Build regions only from safe student candidates. Merge nearby candidates on
   the same line or closely aligned paragraph lines, with a 20% Test-area cap.
+- Represent quarantined evidence with one Test-page review region and retain
+  all applicable safety reasons, avoiding one review item per OCR word.
 - Emit `REVIEW_REQUIRED` when any candidate is quarantined; emit `EMPTY` when no
   safe candidate remains.
 

@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from app.answers.models import AnswerExtractionStatus
 from app.core.config import get_settings
+from app.llm.factory import create_grading_chat_model
 from app.marking.subjective.models import (
     SubjectiveMarkingStatus,
     SubjectiveReasonCode,
@@ -125,13 +126,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     provider: SubjectiveMarkingProvider
     if args.ollama_model:
         settings = get_settings()
+        settings = settings.model_copy(
+            update={"ollama_grading_model": args.ollama_model}
+        )
         client = OllamaHTTPClient(
             base_url=str(settings.ollama_base_url),
             timeout_seconds=settings.ollama_grading_timeout_seconds,
         )
         info = client.model_info(args.ollama_model)
         provider = OllamaSubjectiveMarkingProvider(
-            client=client,
+            chat_model=create_grading_chat_model(settings),
             model=info.model,
             model_version=info.digest,
         )

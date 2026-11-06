@@ -38,6 +38,7 @@ def run_current_evidence_baseline(
             language=settings.tesseract_language,
             psm=settings.tesseract_psm,
             timeout_seconds=settings.tesseract_timeout_seconds,
+            executable=settings.tesseract_executable,
         ),
         OCRNormalizer(),
     )
